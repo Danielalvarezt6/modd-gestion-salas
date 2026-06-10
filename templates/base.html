@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MODD - Gestión de Salas{% endblock %}</title>
+    
+    <!-- Aplicar tema guardado antes del render (evita flash) -->
+    <script>
+      (function() {
+        const t = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Configuración de Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'azul-institucional': '#24398A',
+                        'dorado': '#E1B73D',
+                        'verde-unison': '#5CA847',
+                        'rojo-unison': '#D5433C',
+                        'naranja-unison': '#EBA93B',
+                        'cafe-unison': '#946721',
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'institutional': '0 1px 3px rgba(36, 57, 138, 0.05)',
+                        'institutional-md': '0 4px 12px rgba(36, 57, 138, 0.08)',
+                        'institutional-lg': '0 10px 25px rgba(36, 57, 138, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- CSS Personalizado -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="font-sans antialiased">
+    {% block content %}{% endblock %}
+    
+    <!-- Inicializar iconos de Lucide -->
+    <script>
+        lucide.createIcons();
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

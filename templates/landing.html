@@ -1,0 +1,1468 @@
+{% extends "base.html" %}
+
+{% block title %}MODD - Gestión Interactiva de Salas{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Variables de diseño ── */
+  :root {
+    --blue-600: #24398A;
+    --blue-700: #1c2d6e;
+    --blue-50: #f0f3fc;
+    --blue-100: #dce3f7;
+    --gold: #E1B73D;
+    --gold-light: #fdf6e3;
+    --green: #5CA847;
+    --green-light: #edf7ec;
+    --red: #D5433C;
+    --red-light: #fef0f0;
+    --border: #e5e9f2;
+    --text: #1a2340;
+    --muted: #6b7a99;
+    --surface: #ffffff;
+    --bg: #f7f8fc;
+  }
+
+  /* Modo oscuro */
+  [data-theme="dark"] {
+    --blue-600: #5b7bd6;
+    --blue-700: #4a6bc9;
+    --blue-50: #1a1f3a;
+    --blue-100: #252d4d;
+    --gold: #ffc107;
+    --gold-light: #332700;
+    --green: #81c784;
+    --green-light: #1b3d1b;
+    --red: #ef5350;
+    --red-light: #3d1a1a;
+    --border: #3a4456;
+    --text: #e0e0e0;
+    --muted: #a0a0a0;
+    --surface: #1e1e2e;
+    --bg: #121218;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    transition: background-color .3s ease, color .3s ease;
+  }
+
+  body {
+    background: var(--bg) !important;
+    color: var(--text);
+    transition: background-color .3s ease, color .3s ease;
+  }
+
+  [data-theme="dark"] body {
+    background: var(--bg) !important;
+    color: var(--text);
+  }
+
+  /* Clases de utilidad que ganan a Tailwind (usan !important para evitar override del CDN) */
+  .theme-surface {
+    background-color: var(--surface) !important;
+    color: var(--text);
+  }
+  .theme-bg {
+    background-color: var(--bg) !important;
+    color: var(--text);
+  }
+
+  * {
+    transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  }
+
+  /* ── Nav ── */
+  nav {
+    transition: background-color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  }
+
+  .nav-link {
+    color: var(--muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color .15s;
+  }
+
+  .nav-link:hover {
+    color: var(--blue-600);
+  }
+
+  /* ── Pill badge ── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+
+  .pill-blue {
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+
+  .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ── Hero ── */
+  .hero-section {
+    padding-top: 7rem;
+    padding-bottom: 5rem;
+    background: linear-gradient(160deg, var(--bg) 55%, var(--blue-50) 100%);
+  }
+
+  /* ── Calendar preview card (weekly view) ── */
+  .cal-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(36, 57, 138, .10);
+    overflow: hidden;
+    font-size: .7rem;
+  }
+
+  /* Top bar */
+  .cal-topbar {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .cal-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cal-topbar-title {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .cal-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .62rem;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .conflict-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .65rem;
+    font-weight: 600;
+    color: var(--red);
+    background: var(--red-light);
+    border: 1px solid #fbd0ce;
+    border-radius: 6px;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
+
+  .btn-new-event {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--blue-600);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: .65rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Filter bar */
+  .cal-filterbar {
+    border-bottom: 1px solid var(--border);
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: .62rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  .filter-pill.active {
+    background: var(--blue-600);
+    color: #fff;
+    border-color: var(--blue-600);
+  }
+
+  /* Week header row */
+  .week-header-row {
+    display: grid;
+    grid-template-columns: 42px repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* .week-header-time — empty corner cell, no styles needed */
+
+  .week-day-col {
+    border-left: 1px solid var(--border);
+  }
+
+  .week-day-head {
+    padding: 6px 4px 4px;
+    text-align: center;
+  }
+
+  .week-day-name {
+    font-size: .6rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .week-day-num {
+    font-size: .85rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .week-day-num.today-num {
+    background: var(--blue-600);
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2px auto 0;
+  }
+
+  /* Sub-columns sala labels */
+  .sala-labels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--border);
+  }
+
+  .sala-lbl {
+    text-align: center;
+    font-size: .55rem;
+    font-weight: 700;
+    padding: 2px 0;
+    border-left: 1px solid var(--border);
+  }
+
+  .sala-lbl:first-child {
+    border-left: none;
+  }
+
+  .sala-lbl.s1 {
+    color: var(--blue-600);
+  }
+
+  .sala-lbl.s2 {
+    color: var(--green);
+  }
+
+  .sala-lbl.s3 {
+    color: #9a7520;
+  }
+
+  /* Grid body */
+  .week-body {
+    display: grid;
+    grid-template-columns: 42px repeat(5, 1fr);
+    height: 280px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .time-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .time-slot {
+    height: 56px;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 4px;
+    padding-right: 6px;
+    justify-content: flex-end;
+    font-size: .58rem;
+    color: var(--muted);
+    font-weight: 500;
+    border-top: 1px solid var(--border);
+    box-sizing: border-box;
+  }
+
+  .day-body-col {
+    border-left: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    position: relative;
+  }
+
+  .sala-body-col {
+    border-left: 1px solid var(--border);
+    position: relative;
+    height: 280px;
+  }
+
+  .sala-body-col:first-child {
+    border-left: none;
+  }
+
+  /* Hour lines inside each sala col */
+  .hour-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Event blocks */
+  .ev {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    border-radius: 4px;
+    padding: 3px 4px;
+    overflow: hidden;
+    cursor: default;
+    border-left: 3px solid transparent;
+  }
+
+  .ev-title {
+    font-size: .58rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ev-time {
+    font-size: .53rem;
+    opacity: .75;
+  }
+
+  .ev-resp {
+    font-size: .53rem;
+    opacity: .7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ev-blue {
+    background: var(--blue-100);
+    border-left-color: var(--blue-600);
+  }
+
+  .ev-blue .ev-title {
+    color: var(--blue-600);
+  }
+
+  .ev-blue .ev-time,
+  .ev-blue .ev-resp {
+    color: var(--blue-600);
+  }
+
+  .ev-green {
+    background: var(--green-light);
+    border-left-color: var(--green);
+  }
+
+  .ev-green .ev-title {
+    color: var(--green);
+  }
+
+  .ev-green .ev-time,
+  .ev-green .ev-resp {
+    color: var(--green);
+  }
+
+  .ev-gold {
+    background: var(--gold-light);
+    border-left-color: var(--gold);
+  }
+
+  .ev-gold .ev-title {
+    color: var(--gold);
+  }
+
+  .ev-gold .ev-time,
+  .ev-gold .ev-resp {
+    color: var(--gold);
+  }
+
+  .ev-gray {
+    background: #f0f2f5;
+    border-left-color: #aab0c0;
+  }
+
+  .ev-gray .ev-title {
+    color: #555e75;
+  }
+
+  .ev-gray .ev-time,
+  .ev-gray .ev-resp {
+    color: #6b7a99;
+  }
+
+  [data-theme="dark"] .ev-gray {
+    background: #2a2d3a;
+  }
+
+  [data-theme="dark"] .ev-gray .ev-title {
+    color: #b0b3c0;
+  }
+
+  [data-theme="dark"] .ev-gray .ev-time,
+  [data-theme="dark"] .ev-gray .ev-resp {
+    color: #909aa0;
+  }
+
+  .ev-red {
+    background: var(--red-light);
+    border-left-color: var(--red);
+  }
+
+  .ev-red .ev-title {
+    color: var(--red);
+  }
+
+  .ev-red .ev-time {
+    color: var(--red);
+  }
+
+  /* Multi-sala event (spans 3 cols) */
+  .ev-multi {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    border-radius: 4px;
+    padding: 4px 5px;
+    background: var(--blue-100);
+    border: 1.5px solid var(--blue-600);
+    z-index: 2;
+  }
+
+  .ev-multi .ev-title {
+    font-size: .6rem;
+    font-weight: 700;
+    color: var(--blue-600);
+  }
+
+  .ev-multi .ev-time {
+    font-size: .55rem;
+    color: var(--blue-600);
+    opacity: .8;
+  }
+
+  .ev-multi .ev-resp {
+    font-size: .55rem;
+    color: var(--muted);
+  }
+
+  .ev-multi .ev-hint {
+    font-size: .52rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  /* Legend footer */
+  .cal-footer {
+    border-top: 1px solid var(--border);
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+  }
+
+  .cal-hint {
+    font-size: .6rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .cal-footer-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fl-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: .58rem;
+    color: var(--muted);
+  }
+
+  .fl-sq {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  /* ── Stats bar ── */
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--blue-600);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: .75rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .stat-num.gold {
+    color: var(--gold);
+  }
+
+  /* ── Navbar ── */
+  nav {
+    background: var(--surface) !important;
+    border-bottom-color: var(--border) !important;
+  }
+
+  /* ── Feature cards ── */
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    transition: box-shadow .2s, transform .2s;
+  }
+
+  .feat-card:hover {
+    box-shadow: 0 8px 24px rgba(36, 57, 138, .08);
+    transform: translateY(-2px);
+  }
+
+  [data-theme="dark"] .feat-card:hover {
+    box-shadow: 0 8px 24px rgba(91, 123, 214, .15);
+  }
+
+  .feat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+
+  /* ── Flow step ── */
+  .step-num {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 auto 14px;
+  }
+
+  /* ── Solicitudes preview ── */
+  .req-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .req-row:last-child {
+    border-bottom: none;
+  }
+
+  .status-badge {
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .status-pending {
+    background: #fef3dc;
+    color: #9a7520;
+  }
+
+  [data-theme="dark"] .status-pending {
+    background: #332a00;
+    color: #ffc107;
+  }
+
+  .status-approved {
+    background: var(--green-light);
+    color: #3d8035;
+  }
+
+  [data-theme="dark"] .status-approved {
+    color: #81c784;
+  }
+
+  /* ── Room indicator ── */
+  .room-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .room-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ── CTA section ── */
+  .cta-section {
+    background: var(--blue-600);
+    background-image: radial-gradient(circle at 80% 50%, rgba(255, 255, 255, .05) 0%, transparent 60%);
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    background: var(--blue-600);
+    color: #fff;
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: .95rem;
+    transition: background .15s, box-shadow .15s;
+    box-shadow: 0 2px 8px rgba(36, 57, 138, .25);
+  }
+
+  .btn-primary:hover {
+    background: var(--blue-700);
+    box-shadow: 0 4px 16px rgba(36, 57, 138, .35);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: .95rem;
+    background: var(--surface);
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--blue-600);
+    color: var(--blue-600);
+  }
+
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 32px;
+    background: var(--gold);
+    color: #fff;
+    border-radius: 9px;
+    font-weight: 800;
+    font-size: 1rem;
+    transition: background .15s;
+  }
+
+  .btn-gold:hover {
+    background: var(--blue-600);
+  }
+
+  [data-theme="dark"] .btn-gold {
+    color: #fff;
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--blue-600);
+    margin-bottom: 10px;
+  }
+
+  /* ── Divider arrow (flow) ── */
+  .flow-arrow {
+    color: #c0c8dc;
+  }
+
+  /* ── Scroll reveal subtle ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity .45s ease, transform .45s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ── Hamburger ── */
+  #mobile-menu {
+    display: none;
+  }
+
+  #mobile-menu.open {
+    display: block;
+  }
+
+  /* ── Dark mode button ── */
+  #theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+
+  #theme-toggle:hover {
+    background: var(--blue-50);
+    border-color: var(--blue-600);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ NAV ══════════════════════════════════════════════════════════ -->
+<nav class="fixed top-0 w-full z-50" style="background:var(--surface); border-bottom:1px solid var(--border); box-shadow:0 1px 4px rgba(36,57,138,.06)">
+  <div class="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+      <img src="/static/assets/logo.png" alt="MODD Logo" class="w-8 h-8 object-contain">
+      <div>
+        <span class="text-base font-extrabold" style="color:var(--blue-600)">MODD</span>
+        <span class="text-xs ml-1.5 hidden sm:inline tracking-wide" style="color:var(--muted)">Gestión de Salas</span>
+      </div>
+    </a>
+
+    <!-- Links desktop -->
+    <div class="hidden lg:flex items-center gap-8">
+      <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
+      <a href="#flujo" class="nav-link">Cómo funciona</a>
+      <a href="#herramientas" class="nav-link">Herramientas</a>
+    </div>
+
+    <!-- CTA desktop y Theme Toggle -->
+    <div class="flex items-center gap-3">
+      <button id="theme-toggle" class="p-0" title="Cambiar tema">
+        <i data-lucide="moon" class="w-4 h-4"></i>
+      </button>
+      <button onclick="window.location.href='/login'" class="btn-primary text-sm py-2 px-5">
+        <i data-lucide="log-in" class="w-4 h-4"></i>
+        Iniciar Sesión
+      </button>
+    </div>
+
+    <!-- Hamburger -->
+    <button id="menu-toggle" class="lg:hidden p-1" style="color:var(--muted)">
+      <i data-lucide="menu" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="lg:hidden" style="border-top:1px solid var(--border); background:var(--surface)">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-3">
+      <a href="#funcionalidades" class="nav-link py-1">Funcionalidades</a>
+      <a href="#flujo" class="nav-link py-1">Cómo funciona</a>
+      <a href="#herramientas" class="nav-link py-1">Herramientas</a>
+      <button onclick="window.location.href='/login'" class="btn-primary mt-2 justify-center">
+        Iniciar Sesión
+      </button>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ══ HERO ═════════════════════════════════════════════════════════ -->
+<section class="hero-section">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+      <!-- Left copy -->
+      <div>
+        <div class="pill pill-blue mb-5">
+          <span class="pill-dot"></span>
+          Universidad de Sonora — Sistema de Gestión de Salas
+        </div>
+
+        <h1 class="text-5xl md:text-[3.5rem] font-extrabold leading-tight mb-5" style="color:var(--text)">
+          Gestión Inteligente<br>
+          <span style="color:var(--blue-600)">de Salas Interactivas</span>
+        </h1>
+
+        <p class="text-lg mb-8" style="color:var(--muted); max-width:480px; line-height:1.7">
+          Administra eventos, solicitudes y reservas desde una sola plataforma.
+          Adiós a las hojas de Excel.
+        </p>
+
+        <div class="flex flex-wrap gap-3 mb-12">
+          <button onclick="window.location.href='/login'" class="btn-primary">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            Iniciar Sesión
+          </button>
+          <a href="#funcionalidades" class="btn-ghost">
+            Ver Funcionalidades
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </a>
+        </div>
+
+        <!-- Stats -->
+        <div class="flex gap-10">
+          <div class="stat-item">
+            <div class="stat-num">3</div>
+            <div class="stat-label">Salas gestionadas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Sin conflictos</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num gold">UNISON</div>
+            <div class="stat-label">Universidad de Sonora</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Calendar preview -->
+      <div>
+        <div class="cal-preview">
+          <!-- Top bar con logo -->
+          <div class="cal-topbar">
+            <div class="cal-topbar-left">
+              <img src="/static/assets/logo.png" alt="MODD" class="w-6 h-6 object-contain">
+              <span class="cal-topbar-title">Calendario de Salas</span>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div class="cal-filterbar">
+            <span style="font-size: .62rem; color: var(--muted); font-weight: 600;">Filtrar por:</span>
+            <span class="filter-pill active">Todas las salas</span>
+            <span class="filter-pill">Sala 1</span>
+            <span class="filter-pill">Sala 2</span>
+            <span class="filter-pill">Sala 3</span>
+          </div>
+
+          <!-- Week header -->
+          <div class="week-header-row">
+            <div class="week-header-time"></div>
+            <div class="week-day-col">
+              <div class="week-day-head">
+                <div class="week-day-name">Lun</div>
+                <div class="week-day-num">9</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="week-day-head">
+                <div class="week-day-name">Mar</div>
+                <div class="week-day-num">10</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="week-day-head">
+                <div class="week-day-name">Mié</div>
+                <div class="week-day-num">11</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="week-day-head">
+                <div class="week-day-name">Jue</div>
+                <div class="week-day-num">12</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="week-day-head">
+                <div class="week-day-name">Vie</div>
+                <div class="week-day-num today-num">13</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sala labels -->
+          <div class="week-header-row">
+            <div class="week-header-time"></div>
+            <div class="week-day-col">
+              <div class="sala-labels">
+                <div class="sala-lbl s1">Sala 1</div>
+                <div class="sala-lbl s2">Sala 2</div>
+                <div class="sala-lbl s3">Sala 3</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="sala-labels">
+                <div class="sala-lbl s1">Sala 1</div>
+                <div class="sala-lbl s2">Sala 2</div>
+                <div class="sala-lbl s3">Sala 3</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="sala-labels">
+                <div class="sala-lbl s1">Sala 1</div>
+                <div class="sala-lbl s2">Sala 2</div>
+                <div class="sala-lbl s3">Sala 3</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="sala-labels">
+                <div class="sala-lbl s1">Sala 1</div>
+                <div class="sala-lbl s2">Sala 2</div>
+                <div class="sala-lbl s3">Sala 3</div>
+              </div>
+            </div>
+            <div class="week-day-col">
+              <div class="sala-labels">
+                <div class="sala-lbl s1">Sala 1</div>
+                <div class="sala-lbl s2">Sala 2</div>
+                <div class="sala-lbl s3">Sala 3</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Time grid -->
+          <div class="week-body">
+            <!-- Time column -->
+            <div class="time-col">
+              <div class="time-slot">09:00</div>
+              <div class="time-slot">10:00</div>
+              <div class="time-slot">11:00</div>
+              <div class="time-slot">12:00</div>
+              <div class="time-slot">13:00</div>
+              <div class="time-slot">14:00</div>
+            </div>
+
+            <!-- Monday -->
+            <div class="day-body-col">
+              <div class="sala-body-col">
+                <div class="ev ev-blue" style="top: 0px; height: 56px;">
+                  <div class="ev-title">Clase</div>
+                  <div class="ev-time">09:00-10:00</div>
+                </div>
+                <div class="hour-line" style="top: 56px;"></div>
+                <div class="hour-line" style="top: 112px;"></div>
+                <div class="hour-line" style="top: 168px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 56px;"></div>
+                <div class="hour-line" style="top: 112px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 56px;"></div>
+              </div>
+            </div>
+
+            <!-- Tuesday -->
+            <div class="day-body-col">
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 0px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="ev ev-green" style="top: 56px; height: 56px;">
+                  <div class="ev-title">Taller</div>
+                  <div class="ev-time">10:00-11:00</div>
+                </div>
+                <div class="hour-line" style="top: 56px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 56px;"></div>
+              </div>
+            </div>
+
+            <!-- Wednesday -->
+            <div class="day-body-col">
+              <div class="sala-body-col">
+                <div class="ev ev-blue" style="top: 112px; height: 56px;">
+                  <div class="ev-title">Reunión</div>
+                  <div class="ev-time">11:00-12:00</div>
+                </div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 56px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 56px;"></div>
+              </div>
+            </div>
+
+            <!-- Thursday -->
+            <div class="day-body-col">
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 0px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 0px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="ev ev-gold" style="top: 224px; height: 56px;">
+                  <div class="ev-title">Conferencia</div>
+                  <div class="ev-time">13:00-14:00</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Friday -->
+            <div class="day-body-col">
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 0px;"></div>
+              </div>
+              <div class="sala-body-col">
+                <div class="ev ev-green" style="top: 224px; height: 56px;">
+                  <div class="ev-title">Seminario</div>
+                  <div class="ev-time">13:00-14:00</div>
+                </div>
+              </div>
+              <div class="sala-body-col">
+                <div class="hour-line" style="top: 0px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="cal-footer">
+            <div class="cal-hint">
+              <i data-lucide="info" class="w-3 h-3"></i>
+              Arrastra eventos para moverlos entre salas
+            </div>
+            <div class="cal-footer-legend">
+              <div class="fl-item">
+                <div class="fl-sq" style="background:var(--blue-600)"></div>Sala 1
+              </div>
+              <div class="fl-item">
+                <div class="fl-sq" style="background:var(--green)"></div>Sala 2
+              </div>
+              <div class="fl-item">
+                <div class="fl-sq" style="background:var(--gold)"></div>Sala 3
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ BENEFICIOS ════════════════════════════════════════════════════ -->
+<section id="funcionalidades" class="py-24 theme-surface">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14 reveal">
+      <p class="section-label">Beneficios</p>
+      <h2 class="text-3xl font-bold" style="color:var(--text)">Todo lo que necesitas en una plataforma</h2>
+      <p class="mt-3 text-base" style="color:var(--muted); max-width:480px; margin-inline:auto">
+        Diseñado para personal administrativo que quiere resultados rápidos sin complicaciones.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- Gestión centralizada -->
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:var(--blue-50)">
+          <i data-lucide="layout-grid" class="w-5 h-5" style="color:var(--blue-600)"></i>
+        </div>
+        <h3 class="font-bold mb-2" style="color:var(--text)">Gestión centralizada</h3>
+        <p class="text-sm" style="color:var(--muted); line-height:1.6">
+          Todos los eventos, salas y solicitudes en un solo lugar. Sin archivos dispersos.
+        </p>
+      </div>
+
+      <!-- Calendario interactivo -->
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:var(--green-light)">
+          <i data-lucide="calendar-days" class="w-5 h-5" style="color:var(--green)"></i>
+        </div>
+        <h3 class="font-bold mb-2" style="color:var(--text)">Calendario interactivo</h3>
+        <p class="text-sm" style="color:var(--muted); line-height:1.6">
+          Vista clara de ocupación por sala, filtros rápidos y detección visual de conflictos.
+        </p>
+      </div>
+
+      <!-- Control de solicitudes -->
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:var(--gold-light)">
+          <i data-lucide="file-check-2" class="w-5 h-5" style="color:#9a7520"></i>
+        </div>
+        <h3 class="font-bold mb-2" style="color:var(--text)">Control de solicitudes</h3>
+        <p class="text-sm" style="color:var(--muted); line-height:1.6">
+          Flujo claro: solicitud → revisión → aprobación → evento. Sin pasos perdidos.
+        </p>
+      </div>
+
+      <!-- Reportes automáticos -->
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:var(--blue-50)">
+          <i data-lucide="bar-chart-2" class="w-5 h-5" style="color:#6d4ed8"></i>
+        </div>
+        <h3 class="font-bold mb-2" style="color:var(--text)">Reportes automáticos</h3>
+        <p class="text-sm" style="color:var(--muted); line-height:1.6">
+          Genera reportes por sala, fecha o evento con un clic. Exporta en segundos.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ FLUJO ══════════════════════════════════════════════════════════ -->
+<section id="flujo" class="py-24" style="background:var(--bg)">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14 reveal">
+      <p class="section-label">Flujo del sistema</p>
+      <h2 class="text-3xl font-bold" style="color:var(--text)">De la solicitud al evento en 4 pasos</h2>
+      <p class="mt-3 text-base" style="color:var(--muted)">
+        Un proceso claro y trazable que elimina la confusión y los errores.
+      </p>
+    </div>
+
+    <div class="flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-2">
+
+      <!-- Step 1 -->
+      <div class="flex-1 text-center max-w-[200px] reveal">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 border-2"
+          style="border-color:var(--border); background:var(--surface)">
+          <i data-lucide="file-text" class="w-6 h-6" style="color:var(--muted)"></i>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:var(--muted)">01</p>
+        <h3 class="font-bold mb-1" style="color:var(--text)">Solicitud</h3>
+        <p class="text-xs" style="color:var(--muted)">El solicitante envía su petición de sala</p>
+      </div>
+
+      <div class="flow-arrow hidden lg:block"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+
+      <!-- Step 2 -->
+      <div class="flex-1 text-center max-w-[200px] reveal">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 border-2"
+          style="border-color:var(--gold); background:var(--gold-light)">
+          <i data-lucide="search" class="w-6 h-6" style="color:#9a7520"></i>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:var(--gold)">02</p>
+        <h3 class="font-bold mb-1" style="color:var(--text)">Revisión</h3>
+        <p class="text-xs" style="color:var(--muted)">La administradora revisa disponibilidad</p>
+      </div>
+
+      <div class="flow-arrow hidden lg:block"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+
+      <!-- Step 3 -->
+      <div class="flex-1 text-center max-w-[200px] reveal">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 border-2"
+          style="border-color:var(--green); background:var(--green-light)">
+          <i data-lucide="check-circle-2" class="w-6 h-6" style="color:var(--green)"></i>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:var(--green)">03</p>
+        <h3 class="font-bold mb-1" style="color:var(--text)">Aprobación</h3>
+        <p class="text-xs" style="color:var(--muted)">Se verifica que no haya conflictos</p>
+      </div>
+
+      <div class="flow-arrow hidden lg:block"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+
+      <!-- Step 4 -->
+      <div class="flex-1 text-center max-w-[200px] reveal">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 border-2"
+          style="border-color:var(--blue-600); background:var(--blue-50)">
+          <i data-lucide="calendar-check" class="w-6 h-6" style="color:var(--blue-600)"></i>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:var(--blue-600)">04</p>
+        <h3 class="font-bold mb-1" style="color:var(--text)">Evento Programado</h3>
+        <p class="text-xs" style="color:var(--muted)">El evento aparece en el calendario</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ HERRAMIENTAS + PREVIEW ════════════════════════════════════════ -->
+<section id="herramientas" class="py-24 theme-surface">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16 items-start">
+
+      <!-- Left: feature list -->
+      <div class="reveal">
+        <p class="section-label">Características</p>
+        <h2 class="text-3xl font-bold mb-4" style="color:var(--text)">
+          Herramientas diseñadas para la administración universitaria
+        </h2>
+        <p class="text-base mb-8" style="color:var(--muted); line-height:1.7">
+          MODD reemplaza Excel con una interfaz que cualquier persona puede usar sin capacitación
+          previa. Claridad y eficiencia desde el primer día.
+        </p>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="calendar" class="w-4 h-4 shrink-0" style="color:var(--blue-600)"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Calendario visual</span>
+          </div>
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0" style="color:var(--red)"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Detección de conflictos</span>
+          </div>
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="clipboard-list" class="w-4 h-4 shrink-0" style="color:var(--green)"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Gestión de eventos</span>
+          </div>
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="file-text" class="w-4 h-4 shrink-0" style="color:#9a7520"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Gestión de solicitudes</span>
+          </div>
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="bar-chart-2" class="w-4 h-4 shrink-0" style="color:#6d4ed8"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Reportes</span>
+          </div>
+          <div class="flex items-center gap-2.5 p-3 rounded-lg border" style="border-color:var(--border); background:var(--surface)">
+            <i data-lucide="building-2" class="w-4 h-4 shrink-0" style="color:var(--muted)"></i>
+            <span class="text-sm font-medium" style="color:var(--text)">Control de salas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: requests + rooms preview -->
+      <div class="space-y-4 reveal">
+
+        <!-- Requests card -->
+        <div class="rounded-xl border p-5"
+          style="background:var(--surface); border-color:var(--border); box-shadow:0 2px 12px rgba(36,57,138,.06)">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-sm font-bold" style="color:var(--text)">Solicitudes Pendientes</span>
+            <span class="text-xs font-bold" style="color:var(--red)">3 pendientes</span>
+          </div>
+
+          <div class="req-row">
+            <div>
+              <div class="text-sm font-semibold" style="color:var(--text)">Taller de Innovación</div>
+              <div class="text-xs mt-0.5" style="color:var(--muted)">Sala 1 · 12 Jun</div>
+            </div>
+            <span class="status-badge status-pending">Pendiente</span>
+          </div>
+          <div class="req-row">
+            <div>
+              <div class="text-sm font-semibold" style="color:var(--text)">Reunión Académica</div>
+              <div class="text-xs mt-0.5" style="color:var(--muted)">Sala 2 · 14 Jun</div>
+            </div>
+            <span class="status-badge status-pending">Pendiente</span>
+          </div>
+          <div class="req-row">
+            <div>
+              <div class="text-sm font-semibold" style="color:var(--text)">Conferencia STEM</div>
+              <div class="text-xs mt-0.5" style="color:var(--muted)">Sala 3 · 17 Jun</div>
+            </div>
+            <span class="status-badge status-approved">Aprobado</span>
+          </div>
+        </div>
+
+        <!-- Rooms card -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="room-card flex-col text-center" style="flex-direction:column; align-items:center">
+            <div class="w-full flex items-center gap-2 mb-1">
+              <div class="room-dot" style="background:var(--blue-600)"></div>
+              <span class="text-xs font-bold" style="color:var(--text)">Sala 1</span>
+            </div>
+            <div class="text-xs" style="color:var(--red)">● Ocupada</div>
+          </div>
+          <div class="room-card" style="flex-direction:column; align-items:flex-start">
+            <div class="w-full flex items-center gap-2 mb-1">
+              <div class="room-dot" style="background:var(--green)"></div>
+              <span class="text-xs font-bold" style="color:var(--text)">Sala 2</span>
+            </div>
+            <div class="text-xs" style="color:var(--green)">● Disponible</div>
+          </div>
+          <div class="room-card" style="flex-direction:column; align-items:flex-start">
+            <div class="w-full flex items-center gap-2 mb-1">
+              <div class="room-dot" style="background:var(--gold)"></div>
+              <span class="text-xs font-bold" style="color:var(--text)">Sala 3</span>
+            </div>
+            <div class="text-xs" style="color:var(--green)">● Disponible</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ CTA ════════════════════════════════════════════════════════════ -->
+<section class="cta-section py-24">
+  <div class="max-w-7xl mx-auto px-6 text-center reveal">
+    <h2 class="text-4xl font-extrabold text-white mb-4">¿Listo para dejar atrás el Excel?</h2>
+    <p class="text-blue-200 text-lg mb-10 max-w-xl mx-auto">
+      MODD simplifica la gestión de salas de la Universidad de Sonora. Empieza hoy.
+    </p>
+    <button onclick="window.location.href='/login'" class="btn-gold">
+      <i data-lucide="log-in" class="w-5 h-5"></i>
+      Iniciar Sesión
+    </button>
+  </div>
+</section>
+
+
+<!-- ══ FOOTER ════════════════════════════════════════════════════════ -->
+<footer class="py-10 border-t theme-surface" style="border-color:var(--border)">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+
+    <!-- Brand -->
+    <div class="flex items-center gap-3">
+      <img src="/static/assets/logo.png" alt="MODD Logo" class="w-8 h-8 object-contain">
+      <div>
+        <p class="text-sm font-bold" style="color:var(--text)">MODD</p>
+        <p class="text-xs" style="color:var(--muted)">Gestión Interactiva de Salas</p>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="text-center">
+      <p class="text-xs" style="color:var(--muted)">Universidad de Sonora · Edificio de Servicios Escolares</p>
+    </div>
+
+    <!-- Copyright -->
+    <p class="text-xs" style="color:var(--muted)">
+      © 2026 MODD — Universidad de Sonora. Todos los derechos reservados.
+    </p>
+  </div>
+</footer>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  function initializeTheme() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const htmlElement = document.documentElement;
+
+    if (!themeToggle) return;
+
+    // Check for saved theme preference or default to light mode
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    function updateThemeIcon(theme) {
+      // Remove all children and recreate the icon
+      themeToggle.innerHTML = '';
+      const i = document.createElement('i');
+      i.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+      i.className = 'w-4 h-4';
+      themeToggle.appendChild(i);
+
+      // Reinitialize Lucide icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = htmlElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    });
+  }
+
+  // Run on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    initializeTheme();
+
+    // Mobile menu toggle
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    menuToggle.addEventListener('click', () => {
+      mobileMenu.classList.toggle('open');
+    });
+
+    // Close mobile menu on link click
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => mobileMenu.classList.remove('open'));
+    });
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+      { threshold: 0.12 }
+    );
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  });
+
+  // If DOMContentLoaded already fired, run initialization immediately
+  if (document.readyState !== 'loading') {
+    lucide.createIcons();
+    initializeTheme();
+  }
+</script>
+{% endblock %}

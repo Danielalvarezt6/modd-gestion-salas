@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar Sesión - MODD{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Variables — mismo sistema que landing.html ── */
+  :root {
+    --blue-600: #24398A;
+    --blue-700: #1c2d6e;
+    --blue-50:  #f0f3fc;
+    --blue-100: #dce3f7;
+    --gold:     #E1B73D;
+    --green:    #5CA847;
+    --red:      #D5433C;
+    --red-light: #fef0f0;
+    --border:   #e5e9f2;
+    --text:     #1a2340;
+    --muted:    #6b7a99;
+    --surface:  #ffffff;
+    --bg:       #f7f8fc;
+  }
+
+  [data-theme="dark"] {
+    --blue-600: #5b7bd6;
+    --blue-700: #4a6bc9;
+    --blue-50:  #1a1f3a;
+    --blue-100: #252d4d;
+    --gold:     #ffc107;
+    --green:    #81c784;
+    --red:      #ef5350;
+    --red-light: #3d1a1a;
+    --border:   #3a4456;
+    --text:     #e0e0e0;
+    --muted:    #a0a0a0;
+    --surface:  #1e1e2e;
+    --bg:       #121218;
+  }
+
+  html, body {
+    transition: background-color .3s ease, color .3s ease;
+  }
+  * {
+    transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .animate-spin { animation: spin 1s linear infinite; }
+
+  /* ── Layout ── */
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .login-wrap {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Panel izquierdo (branding) ── */
+  .brand-panel {
+    display: none;
+    width: 45%;
+    background: linear-gradient(145deg, #24398A 0%, #1a2d6e 100%);
+    color: #fff;
+    padding: 3rem;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  @media (min-width: 1024px) { .brand-panel { display: flex; } }
+
+  .brand-circle-1 {
+    position: absolute; top: 2.5rem; right: 2.5rem;
+    width: 8rem; height: 8rem;
+    background: rgba(255,255,255,.08); border-radius: 50%;
+  }
+  .brand-circle-2 {
+    position: absolute; bottom: 5rem; left: 2.5rem;
+    width: 10rem; height: 10rem;
+    background: rgba(225,183,61,.15); border-radius: 50%;
+  }
+
+  .brand-feature {
+    display: flex; align-items: flex-start; gap: .75rem;
+  }
+  .brand-feature-icon {
+    width: 2rem; height: 2rem; border-radius: .5rem;
+    background: rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Panel derecho (formulario) ── */
+  .form-panel {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+    background: var(--bg);
+  }
+  .form-inner { width: 100%; max-width: 28rem; }
+
+  /* ── Botón Volver ── */
+  .btn-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .875rem; font-weight: 500;
+    color: var(--muted); background: none; border: none;
+    cursor: pointer; padding: 0; margin-bottom: 2rem;
+  }
+  .btn-back:hover { color: var(--blue-600); transform: none; }
+
+  /* ── Form elements ── */
+  .login-title {
+    font-size: 1.875rem; font-weight: 800;
+    color: var(--text); margin: 0 0 .5rem;
+  }
+  .login-subtitle {
+    font-size: .9rem; color: var(--muted); margin: 0 0 2rem;
+  }
+  .field-label {
+    display: block; font-size: .875rem; font-weight: 600;
+    color: var(--text); margin-bottom: .5rem;
+  }
+  .field-input {
+    width: 100%; padding: .75rem 1rem;
+    border: 1.5px solid var(--border); border-radius: .5rem;
+    background: var(--surface); color: var(--text);
+    font-size: .95rem; outline: none;
+    font-family: inherit;
+  }
+  .field-input::placeholder { color: var(--muted); }
+  .field-input:focus {
+    border-color: var(--blue-600);
+    box-shadow: 0 0 0 3px rgba(91,123,214,.15);
+  }
+  .field-input-pr { padding-right: 3rem; }
+
+  /* ── Submit ── */
+  .btn-submit {
+    width: 100%; padding: .85rem 1.5rem;
+    background: var(--blue-600); color: #fff;
+    border: none; border-radius: .5rem;
+    font-size: 1rem; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    box-shadow: 0 2px 8px rgba(36,57,138,.25);
+  }
+  .btn-submit:hover { background: var(--blue-700); }
+  .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Error alert ── */
+  .error-box {
+    display: none;
+    margin-bottom: 1.5rem; padding: 1rem;
+    background: var(--red-light);
+    border: 1px solid var(--red);
+    border-radius: .5rem;
+    align-items: flex-start; gap: .75rem;
+    color: var(--red); font-size: .875rem;
+  }
+  .error-box.visible { display: flex; }
+
+  /* ── Demo badge ── */
+  .demo-badge {
+    margin-top: 1.5rem; padding: 1rem;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-100);
+    border-radius: .5rem;
+    font-size: .75rem; text-align: center;
+    color: var(--blue-600);
+  }
+
+  /* ── Theme toggle (floating) ── */
+  .theme-toggle-btn {
+    position: fixed; top: 1rem; right: 1rem; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    cursor: pointer;
+  }
+  .theme-toggle-btn:hover {
+    background: var(--blue-50); border-color: var(--blue-600); transform: none;
+  }
+
+  /* ── Password toggle ── */
+  .pw-toggle {
+    position: absolute; right: .75rem; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); display: flex; align-items: center;
+    padding: 0;
+  }
+  .pw-toggle:hover { color: var(--text); transform: translateY(-50%); }
+
+  /* ── Forgot link ── */
+  .forgot-link {
+    font-size: .875rem; color: var(--blue-600); text-decoration: none;
+  }
+  .forgot-link:hover { text-decoration: underline; }
+
+  /* ── Mobile logo ── */
+  .mobile-logo {
+    display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem;
+  }
+  @media (min-width: 1024px) { .mobile-logo { display: none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Botón de tema flotante -->
+<button id="login-theme-toggle" class="theme-toggle-btn" title="Cambiar tema">
+  <i data-lucide="moon" class="w-4 h-4"></i>
+</button>
+
+<div class="login-wrap">
+
+  <!-- ── Panel Izquierdo (Branding) ── -->
+  <div class="brand-panel">
+    <div class="brand-circle-1"></div>
+    <div class="brand-circle-2"></div>
+
+    <!-- Logo + título -->
+    <div style="position:relative; z-index:1">
+      <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:2rem">
+        <img src="/static/assets/logo.png" alt="MODD Logo" style="width:3rem; height:3rem; object-fit:contain">
+        <div>
+          <h1 style="font-size:1.5rem; font-weight:800; margin:0">MODD</h1>
+          <p style="font-size:.7rem; letter-spacing:.1em; opacity:.75; margin:0">GESTIÓN DE SALAS</p>
+        </div>
+      </div>
+
+      <h2 style="font-size:1.75rem; font-weight:700; line-height:1.3; margin-bottom:1rem">
+        Sistema de Gestión de<br>Salas Interactivas
+      </h2>
+      <p style="opacity:.8; font-size:.9rem; line-height:1.6">
+        Universidad de Sonora<br>
+        Edificio de Servicios Escolares
+      </p>
+    </div>
+
+    <!-- Características -->
+    <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:1rem">
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p style="font-weight:600; margin:0">Calendario Visual</p>
+          <p style="font-size:.8rem; opacity:.75; margin:0">Gestiona eventos con vista semanal</p>
+        </div>
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p style="font-weight:600; margin:0">Control de Solicitudes</p>
+          <p style="font-size:.8rem; opacity:.75; margin:0">Aprueba o rechaza reservas</p>
+        </div>
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <i data-lucide="alert-circle" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p style="font-weight:600; margin:0">Detección de Conflictos</p>
+          <p style="font-size:.8rem; opacity:.75; margin:0">Previene solapamientos automáticamente</p>
+        </div>
+      </div>
+      <div class="brand-feature">
+        <div class="brand-feature-icon">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p style="font-weight:600; margin:0">Reportes PDF</p>
+          <p style="font-size:.8rem; opacity:.75; margin:0">Exporta información detallada</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel Derecho (Formulario) ── -->
+  <div class="form-panel">
+    <div class="form-inner">
+
+      <!-- Volver -->
+      <button onclick="window.location.href='/'" class="btn-back">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Volver
+      </button>
+
+      <!-- Logo (solo móvil) -->
+      <div class="mobile-logo">
+        <img src="/static/assets/logo.png" alt="MODD Logo" style="width:2.5rem; height:2.5rem; object-fit:contain">
+        <div>
+          <p style="font-size:1.25rem; font-weight:800; color:var(--blue-600); margin:0">MODD</p>
+          <p style="font-size:.7rem; color:var(--muted); margin:0">GESTIÓN DE SALAS</p>
+        </div>
+      </div>
+
+      <!-- Encabezado -->
+      <h2 class="login-title">Iniciar sesión</h2>
+      <p class="login-subtitle">Accede al panel de administración de salas</p>
+
+      <!-- Error alert -->
+      <div id="error-alert" class="error-box">
+        <i data-lucide="alert-circle" style="width:1.25rem; height:1.25rem; flex-shrink:0"></i>
+        <p id="error-message" style="margin:0"></p>
+      </div>
+
+      <!-- Formulario -->
+      <form id="login-form" style="display:flex; flex-direction:column; gap:1.5rem">
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="field-label">Correo electrónico</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            autocomplete="email"
+            placeholder="admin@unison.mx"
+            class="field-input"
+            required
+          >
+        </div>
+
+        <!-- Contraseña -->
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem">
+            <label for="password" class="field-label" style="margin:0">Contraseña</label>
+            <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div style="position:relative">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              class="field-input field-input-pr"
+              required
+            >
+            <button type="button" id="toggle-password" class="pw-toggle" aria-label="Mostrar u ocultar contraseña">
+              <i data-lucide="eye" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" id="submit-btn" class="btn-submit">
+          <i data-lucide="log-in" class="w-5 h-5"></i>
+          <span id="submit-text">Iniciar sesión</span>
+        </button>
+      </form>
+
+      <!-- Demo badge -->
+      <div class="demo-badge">
+        <span style="font-weight:700">Credenciales de demostración:</span><br>
+        admin@unison.mx · modd2026
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Leer tema guardado y aplicarlo inmediatamente ──
+(function() {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+  lucide.createIcons();
+
+  // ── Theme toggle ──
+  const html = document.documentElement;
+  const themeBtn = document.getElementById('login-theme-toggle');
+
+  function updateThemeIcon(theme) {
+    themeBtn.innerHTML = '';
+    const i = document.createElement('i');
+    i.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+    i.className = 'w-4 h-4';
+    themeBtn.appendChild(i);
+    lucide.createIcons();
+  }
+
+  updateThemeIcon(html.getAttribute('data-theme') || 'light');
+
+  themeBtn.addEventListener('click', () => {
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeIcon(next);
+  });
+
+  // ── Formulario ──
+  const loginForm      = document.getElementById('login-form');
+  const emailInput     = document.getElementById('email');
+  const passwordInput  = document.getElementById('password');
+  const togglePwBtn    = document.getElementById('toggle-password');
+  const submitBtn      = document.getElementById('submit-btn');
+  const errorAlert     = document.getElementById('error-alert');
+  const errorMessage   = document.getElementById('error-message');
+
+  const VALID_EMAIL    = 'admin@unison.mx';
+  const VALID_PASSWORD = 'modd2026';
+
+  // Toggle mostrar/ocultar contraseña
+  togglePwBtn.addEventListener('click', function() {
+    const type = passwordInput.type === 'password' ? 'text' : 'password';
+    passwordInput.type = type;
+    const icon = this.querySelector('i');
+    icon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+    lucide.createIcons();
+  });
+
+  function showError(message) {
+    errorMessage.textContent = message;
+    errorAlert.classList.add('visible');
+    lucide.createIcons();
+  }
+
+  function hideError() {
+    errorAlert.classList.remove('visible');
+  }
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+      submitBtn.innerHTML = `
+        <svg class="animate-spin" style="width:1.25rem;height:1.25rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path style="opacity:.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Iniciando sesión…</span>
+      `;
+    } else {
+      submitBtn.innerHTML = `
+        <i data-lucide="log-in" class="w-5 h-5"></i>
+        <span>Iniciar sesión</span>
+      `;
+      lucide.createIcons();
+    }
+  }
+
+  // Submit
+  loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    hideError();
+
+    const email    = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      showError('Por favor completa todos los campos');
+      return;
+    }
+
+    if (email !== VALID_EMAIL || password !== VALID_PASSWORD) {
+      showError('Credenciales incorrectas. Usa admin@unison.mx / modd2026');
+      return;
+    }
+
+    setLoading(true);
+    setTimeout(function() {
+      window.location.href = '/dashboard';
+    }, 900);
+  });
+
+  // Limpiar error al escribir
+  emailInput.addEventListener('input', hideError);
+  passwordInput.addEventListener('input', hideError);
+});
+</script>
+{% endblock %}

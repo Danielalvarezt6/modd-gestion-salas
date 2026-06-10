@@ -1,0 +1,29 @@
+# Dependencias del Backend FastAPI para MODD
+
+# Framework Web
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# Motor de plantillas
+jinja2==3.1.4
+
+# ORM y Base de Datos
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+alembic==1.14.0
+
+# Autenticación y Seguridad
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.17
+
+# Variables de entorno
+python-dotenv==1.0.1
+
+# Validación de datos
+pydantic==2.10.5
+pydantic-settings==2.7.0
+
+# Utilidades
+python-dateutil==2.9.0
+pytz==2024.2
