@@ -15,18 +15,54 @@ MODD es una aplicación web diseñada para la administración y reserva de las s
 
 ```text
 modd-gestion-salas/
-├── app.py             # Servidor FastAPI
-├── requirements.txt   # Dependencias de Python
-├── static/            # Archivos estáticos
-│   ├── css/
-│   │   └── custom.css # Estilos personalizados y variables de temas
-│   └── js/
-│   │   └── landing.js # Interactividad y lógica de cliente
-├── templates/          # Vistas (Jinja2 Templates)
-│   ├── base.html      # Estructura HTML base y barra de navegación
-│   ├── landing.html   # Página de inicio / presentación
-│   └── login.html     # Formulario de acceso al sistema
-└── guidelines/        # Documentación de diseño y desarrollo
+│
+├── .env                        # Variables de entorno (credenciales, puerto, base de datos)
+├── requirements.txt            # Dependencias del proyecto (FastAPI, Uvicorn, Jinja2, etc.)
+│
+└── app/                        # Directorio principal del módulo de la aplicación
+    ├── __init__.py
+    ├── main.py                 # Punto de entrada de Uvicorn, configuración de FastAPI y CORS
+    │
+    ├── routers/                # Enrutadores (Controladores de los endpoints)
+    │   ├── __init__.py
+    │   ├── views.py            # Rutas visuales que renderizan las plantillas Jinja2
+    │   ├── api_auth.py         # Endpoints REST para autenticación (recibe el POST del login)
+    │   └── api_salas.py        # Endpoints REST para enviar JSONs al dashboard (Fase 2)
+    │
+    ├── templates/              # Plantillas visuales (Frontend renderizado por servidor)
+    │   ├── base.html           # Plantilla maestra con cabeceras y Tailwind
+    │   ├── landing.html        # Página principal de información
+    │   ├── login.html          # Formulario de inicio de sesión con fetch asíncrono
+    │   └── dashboard.html      # Pantalla de éxito tras el inicio de sesión
+    │
+    ├── static/                 # Archivos estáticos públicos
+    │   ├── css/
+    │   │   └── custom.css      # Estilos personalizados (colores, sombras, utilidades)
+    │   ├── js/
+    │   │   └── landing.js      # Interactividad del frontend
+    │   └── assets/
+    │       └── logo.png        # Recursos gráficos y multimedia
+    │
+    ├── core/                   # (En preparación) Lógica central y configuraciones
+    │   ├── __init__.py
+    │   ├── config.py           
+    │   ├── database.py         # Aquí irá el 'engine' y la conexión a PostgreSQL
+    │   └── security.py         
+    │
+    ├── models/                 # (En preparación) Modelos ORM (Traducción del diagrama E-R)
+    │   ├── __init__.py
+    │   ├── usuarios.py         
+    │   └── salas.py            
+    │
+    ├── schemas/                # (En preparación) Esquemas de validación de Pydantic
+    │   ├── __init__.py
+    │   ├── usuarios.py         
+    │   └── salas.py            
+    │
+    └── crud/                   # (En preparación) Operaciones directas a la base de datos
+        ├── __init__.py
+        ├── usuarios.py         
+        └── salas.py
 ```
 
 ---
@@ -62,7 +98,7 @@ modd-gestion-salas/
 
 4. **Ejecutar el servidor de desarrollo:**
    ```bash
-   python app.py
+    uvicorn app.main:app --reload
    ```
    *Nota: El servidor iniciará en http://localhost:8000*
 

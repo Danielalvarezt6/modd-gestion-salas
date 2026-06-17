@@ -413,9 +413,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const errorAlert     = document.getElementById('error-alert');
   const errorMessage   = document.getElementById('error-message');
 
-  const VALID_EMAIL    = 'admin@unison.mx';
-  const VALID_PASSWORD = 'modd2026';
-
   // Toggle mostrar/ocultar contraseña
   togglePwBtn.addEventListener('click', function() {
     const type = passwordInput.type === 'password' ? 'text' : 'password';
@@ -454,9 +451,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Submit
-  loginForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+  // Submit real al backend de FastAPI
+  loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault(); // <-- Esto detiene el GET que viste en la consola
     hideError();
 
     const email    = emailInput.value.trim();
@@ -467,15 +464,31 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    if (email !== VALID_EMAIL || password !== VALID_PASSWORD) {
-      showError('Credenciales incorrectas. Usa admin@unison.mx / modd2026');
-      return;
-    }
-
     setLoading(true);
-    setTimeout(function() {
-      window.location.href = '/dashboard';
-    }, 900);
+
+    try {
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.redirect || '/dashboard';
+      } else {
+        const errorData = await response.json();
+        showError(errorData.detail || 'Credenciales incorrectas');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error en la petición:", error);
+      showError('Error de conexión con el servidor. Revisa tu terminal.');
+      setLoading(false);
+    }
   });
 
   // Limpiar error al escribir
