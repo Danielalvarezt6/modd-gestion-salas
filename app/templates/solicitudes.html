@@ -49,19 +49,19 @@
 
     <section class="admin-stat-grid" aria-label="Resumen de solicitudes">
       <button class="admin-stat-card is-selected" data-status-card="todas" type="button">
-        <div class="admin-stat-value">5</div>
+        <div class="admin-stat-value">{{ stat_total }}</div>
         <div class="admin-stat-label">Todas</div>
       </button>
       <button class="admin-stat-card" data-status-card="pendiente" type="button" style="--stat-color:#8a6200">
-        <div class="admin-stat-value">3</div>
+        <div class="admin-stat-value">{{ stat_pendientes }}</div>
         <div class="admin-stat-label">Pendiente</div>
       </button>
       <button class="admin-stat-card" data-status-card="aprobada" type="button" style="--stat-color:#176b2b">
-        <div class="admin-stat-value">1</div>
+        <div class="admin-stat-value">{{ stat_aprobadas }}</div>
         <div class="admin-stat-label">Aprobada</div>
       </button>
       <button class="admin-stat-card" data-status-card="rechazada" type="button" style="--stat-color:#9f1f1a">
-        <div class="admin-stat-value">1</div>
+        <div class="admin-stat-value">{{ stat_rechazadas }}</div>
         <div class="admin-stat-label">Rechazada</div>
       </button>
     </section>
@@ -76,7 +76,6 @@
         <option value="pendiente">Pendientes</option>
         <option value="aprobada">Aprobadas</option>
         <option value="rechazada">Rechazadas</option>
-        <option value="cancelada">Canceladas</option>
       </select>
     </section>
 
@@ -96,71 +95,64 @@
             </tr>
           </thead>
           <tbody>
-            <tr data-status="pendiente" data-search="ana torres seminario posgrado depto letras sala 2">
-              <td class="admin-muted">sol1</td>
-              <td><div class="admin-strong">Mg. Ana Torres</div><div class="admin-muted">ana.torres@unison.mx</div></td>
-              <td>Depto. de Letras</td>
-              <td><div class="admin-strong">Seminario de Posgrado</div><div class="admin-muted">45 asistentes · Teatro</div></td>
-              <td>Sala 2</td>
-              <td><div>Martes</div><div class="admin-muted">08:00 - 10:00</div></td>
-              <td><span class="status-pill pendiente">Pendiente</span></td>
+            {% for sol in solicitudes %}
+            <!-- 1. Agregamos los data-attributes para que el JS pueda filtrar -->
+            <tr data-status="{{ sol.estado }}" data-search="{{ sol.solicitante.nombre | lower }} {{ sol.solicitante.apellido | lower }} {{ sol.estado }}">
+
+              <!-- ID -->
+              <td>{{ sol.id_solicitud }}</td>
+
+              <!-- Solicitante -->
               <td>
-                <div class="admin-action-row">
-                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
-                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                {% if sol.solicitante %}
+                  {{ sol.solicitante.nombre }} {{ sol.solicitante.apellido }}
+                {% else %}
+                  Sin asignante
+                {% endif %}
+              </td>
+
+              <!-- Evento (Asumiendo que una solicitud tiene al menos un evento) -->
+              <td>
+                {% if sol.eventos %}
+                  {{ sol.eventos[0].titulo }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <!-- Sala -->
+              <td>
+                {% if sol.eventos and sol.eventos[0].salas %}
+                  Sala {{ sol.eventos[0].salas[0].numero_sala }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <!-- Fecha / Hora -->
+              <td>{{ sol.fecha_solicitud }} / {{ sol.hora_de_solicitud }}</td>
+
+              <!-- 2. Mostramos el Estado con su clase (capitalize hace la primera letra mayúscula) -->
+              <td>
+                <span class="status-pill {{ sol.estado }}">{{ sol.estado | capitalize }}</span>
+              </td>
+
+              <!-- 3. Agregamos los data-action a los botones -->
+              <td>
+                <div class="action-buttons">
+                  <button class="btn-icon view" title="Ver detalles" data-action="view"><i class="fas fa-eye"></i></button>
+                  <button class="btn-icon approve" title="Aprobar" data-action="approve"><i class="fas fa-check"></i></button>
+                  <button class="btn-icon reject" title="Rechazar" data-action="reject"><i class="fas fa-times"></i></button>
                 </div>
               </td>
             </tr>
-            <tr data-status="pendiente" data-search="veronica cruz clase medicina depto ciencias sala 3">
-              <td class="admin-muted">sol2</td>
-              <td><div class="admin-strong">Dra. Veronica Cruz</div><div class="admin-muted">v.cruz@unison.mx</div></td>
-              <td>Depto. de Ciencias</td>
-              <td><div class="admin-strong">Clase Medicina</div><div class="admin-muted">25 asistentes · Aula filas</div></td>
-              <td>Sala 3</td>
-              <td><div>Miercoles</div><div class="admin-muted">09:00 - 11:00</div></td>
-              <td><span class="status-pill pendiente">Pendiente</span></td>
-              <td>
-                <div class="admin-action-row">
-                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
-                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                </div>
-              </td>
+
+            {% else %}
+            <tr>
+              <!-- 4. Ajustamos el colspan de 5 a 8 porque la tabla tiene 8 columnas -->
+              <td colspan="8" style="text-align: center;">No hay solicitudes registradas en la base de datos.</td>
             </tr>
-            <tr data-status="pendiente" data-search="diana morales clase literatura empresa externa sala 2">
-              <td class="admin-muted">sol3</td>
-              <td><div class="admin-strong">Lic. Diana Morales</div><div class="admin-muted">diana.morales@gmail.com</div></td>
-              <td>Empresa externa</td>
-              <td><div class="admin-strong">Clase Literatura</div><div class="admin-muted">22 asistentes · U / Herradura</div></td>
-              <td>Sala 2</td>
-              <td><div>Viernes</div><div class="admin-muted">09:00 - 12:00</div></td>
-              <td><span class="status-pill pendiente">Pendiente</span></td>
-              <td>
-                <div class="admin-action-row">
-                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
-                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr data-status="rechazada" data-search="sandra lopez conferencia finanzas depto economia sala 3">
-              <td class="admin-muted">sol4</td>
-              <td><div class="admin-strong">Prof. Sandra Lopez</div><div class="admin-muted">sandra.lopez@unison.mx</div></td>
-              <td>Depto. de Economia</td>
-              <td><div class="admin-strong">Conferencia de Finanzas</div><div class="admin-muted">70 asistentes · Teatro</div></td>
-              <td>Sala 3</td>
-              <td><div>Viernes</div><div class="admin-muted">13:00 - 16:00</div></td>
-              <td><span class="status-pill rechazada">Rechazada</span></td>
-              <td><button class="admin-soft-button" data-action="view" type="button">Ver detalle</button></td>
-            </tr>
-            <tr data-status="aprobada" data-search="roberto silva workshop innovacion empresa externa sala 3">
-              <td class="admin-muted">sol5</td>
-              <td><div class="admin-strong">Ing. Roberto Silva</div><div class="admin-muted">rsilva@empresa.mx</div></td>
-              <td>Empresa externa</td>
-              <td><div class="admin-strong">Workshop de Innovacion</div><div class="admin-muted">35 asistentes · Grupos de trabajo</div></td>
-              <td>Sala 3</td>
-              <td><div>Jueves</div><div class="admin-muted">08:00 - 12:00</div></td>
-              <td><span class="status-pill aprobada">Aprobada</span></td>
-              <td><button class="admin-soft-button" data-action="view" type="button">Ver evento</button></td>
-            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
