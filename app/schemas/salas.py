@@ -120,7 +120,8 @@ class SolicitudEventoCreate(BaseModel):
     evento_inicio: time
     evento_fin: time
     evento_asistentes: Optional[int] = 0
-    sala_id: int
+    sala_id: Optional[int] = None
+    salas_ids: Optional[List[int]] = None
     acomodo: Optional[str] = None
     equipo_de_sonido: Optional[bool] = False
     cafeteria: Optional[bool] = False

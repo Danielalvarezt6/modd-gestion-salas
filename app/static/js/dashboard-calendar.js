@@ -12,7 +12,8 @@
   const HOUR_HEIGHT = 74;
 
   let events = [];
-  let weekStart = getMonday(new Date());
+  let focusDate = new Date();
+  let weekStart = getMonday(focusDate);
   let visibleRooms = rooms.map((room) => room.id);
   let searchTerm = '';
   let fullCalendar = null;
@@ -91,6 +92,14 @@
       rerenderActiveViews();
     });
 
+    document.getElementById('calendar-prev-week')?.addEventListener('click', () => changeWeek(-1));
+    document.getElementById('calendar-next-week')?.addEventListener('click', () => changeWeek(1));
+    document.getElementById('calendar-today-week')?.addEventListener('click', () => {
+      focusDate = new Date();
+      weekStart = getMonday(focusDate);
+      rerenderActiveViews();
+    });
+
     document.querySelectorAll('.modd-room-filters input').forEach((input) => {
       input.addEventListener('change', () => {
         const checkedRooms = Array.from(document.querySelectorAll('.modd-room-filters input:checked')).map((item) => item.value);
@@ -124,6 +133,7 @@
     document.querySelectorAll('[data-calendar-view]').forEach((button) => {
       button.classList.toggle('active', button.dataset.calendarView === view);
     });
+    updateWeekLabel(Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)));
 
     const weekView = document.getElementById('week-calendar-view');
     const fullView = document.getElementById('fullcalendar-view');
@@ -140,7 +150,7 @@
 
     if (fullCalendar) {
       fullCalendar.changeView(view === 'month' ? 'dayGridMonth' : 'timeGridDay');
-      fullCalendar.gotoDate(weekStart);
+      fullCalendar.gotoDate(view === 'day' ? focusDate : weekStart);
       fullCalendar.updateSize();
       renderFullCalendarEvents();
     }
@@ -151,6 +161,7 @@
     if (!grid) return;
 
     const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+    updateWeekLabel(days);
     grid.style.setProperty('--day-count', String(days.length));
     grid.style.setProperty('--room-count', String(visibleRooms.length));
     grid.innerHTML = '';
@@ -424,14 +435,13 @@
   function initFullCalendar() {
     const fullCalendarElement = document.getElementById('modd-fullcalendar');
     if (!fullCalendarElement || typeof FullCalendar === 'undefined') return;
-
     fullCalendar = new FullCalendar.Calendar(fullCalendarElement, {
       initialView: 'dayGridMonth',
       locale: 'es',
       height: 'auto',
       editable: true,
       selectable: false,
-      nowIndicator: true,
+      nowIndicator: false,
       allDaySlot: false,
       slotMinTime: '08:00:00',
       slotMaxTime: '18:00:00',
@@ -533,7 +543,9 @@
     document.getElementById('event-delete-button')?.classList.toggle('hidden', !isExisting);
 
     const selectedRooms = eventData.rooms?.length ? eventData.rooms : ['sala1'];
-    document.getElementById('event-room-single').value = selectedRooms[0]?.replace('sala', '') || '1';
+    document.querySelectorAll('input[name="event-room"]').forEach((input) => {
+      input.checked = selectedRooms.includes(input.value);
+    });
     ['request-first-name', 'request-last-name', 'request-email', 'request-phone'].forEach((id) => {
       const input = document.getElementById(id);
       if (input) input.disabled = isExisting;
@@ -562,10 +574,17 @@
     const date = document.getElementById('event-date').value;
     const startTime = document.getElementById('event-start').value;
     const endTime = document.getElementById('event-end').value;
-    const selectedRooms = [`sala${document.getElementById('event-room-single').value}`];
+    const selectedRooms = Array.from(document.querySelectorAll('input[name="event-room"]:checked')).map((input) => input.value);
+    const attendees = Number(document.getElementById('event-attendees').value || 0);
 
     if (!selectedRooms.length) {
       showAlert('Selecciona al menos una sala.');
+      return;
+    }
+
+    if (attendees > selectedRooms.length * 40) {
+      const neededRooms = Math.ceil(attendees / 40);
+      showAlert(`El cupo maximo es de 40 personas por sala. Para ${attendees} asistentes selecciona al menos ${neededRooms} salas.`);
       return;
     }
 
@@ -588,7 +607,7 @@
       hora_de_termino: `${endTime}:00`,
       // Convertimos los IDs del HTML ['sala1', 'sala2'] a una lista de enteros [1, 2]
       salas_ids: selectedRooms.map(room => parseInt(room.replace('sala', ''))),
-      no_de_asistentes: Number(document.getElementById('event-attendees').value || 0)
+      no_de_asistentes: attendees
     };
 
     // Validacion visual de conflictos antes de guardar.
@@ -633,6 +652,41 @@
 
   function hasConflict(proposed, ignoredId) {
     return getConflictInfo(proposed, ignoredId).hasConflict;
+  }
+
+  function changeWeek(direction) {
+    if (activeView === 'day') {
+      focusDate = addDays(focusDate, direction);
+      weekStart = getMonday(focusDate);
+    } else {
+      weekStart = addDays(weekStart, direction * 7);
+      focusDate = weekStart;
+    }
+    rerenderActiveViews();
+  }
+
+  function updateWeekLabel(days) {
+    const label = document.getElementById('calendar-week-label');
+    if (!label || !days.length) return;
+    if (activeView === 'day') {
+      label.textContent = new Intl.DateTimeFormat('es-MX', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }).format(focusDate);
+      return;
+    }
+    const first = days[0];
+    const last = days[days.length - 1];
+    const sameMonth = first.getMonth() === last.getMonth();
+    const sameYear = first.getFullYear() === last.getFullYear();
+    const monthFormatter = new Intl.DateTimeFormat('es-MX', { month: 'short' });
+    const firstText = sameMonth
+      ? String(first.getDate()).padStart(2, '0')
+      : `${String(first.getDate()).padStart(2, '0')} ${monthFormatter.format(first)}`;
+    const lastText = `${String(last.getDate()).padStart(2, '0')} ${monthFormatter.format(last)}${sameYear ? '' : ` ${last.getFullYear()}`}`;
+    label.textContent = `${firstText} - ${lastText} ${last.getFullYear()}`;
   }
 
   function getConflictInfo(proposed, ignoredId) {
@@ -711,7 +765,7 @@
       evento_inicio: `${startTime}:00`,
       evento_fin: `${endTime}:00`,
       evento_asistentes: Number(document.getElementById('event-attendees').value || 0),
-      sala_id: parseInt(selectedRooms[0].replace('sala', ''), 10),
+      salas_ids: selectedRooms.map((room) => parseInt(room.replace('sala', ''), 10)),
       acomodo: document.getElementById('event-layout').value.trim() || null,
       equipo_de_sonido: document.getElementById('event-audio').checked,
       cafeteria: document.getElementById('event-catering').checked,
@@ -781,7 +835,10 @@
   function rerenderActiveViews() {
     renderWeekCalendar();
     renderFullCalendarEvents();
-    if (activeView !== 'week' && fullCalendar) fullCalendar.updateSize();
+    if (activeView !== 'week' && fullCalendar) {
+      fullCalendar.gotoDate(activeView === 'day' ? focusDate : weekStart);
+      fullCalendar.updateSize();
+    }
   }
 
   function showAlert(message, type) {

@@ -112,15 +112,32 @@
       </label>
       <label>
         <span>Sala</span>
-        <input id="detail-room" type="text">
+        <div class="request-check-grid compact-check-grid">
+          <label class="modd-checkbox-card">
+            <input name="detail-room" type="checkbox" value="1">
+            <span>Sala 1</span>
+          </label>
+          <label class="modd-checkbox-card">
+            <input name="detail-room" type="checkbox" value="2">
+            <span>Sala 2</span>
+          </label>
+          <label class="modd-checkbox-card">
+            <input name="detail-room" type="checkbox" value="3">
+            <span>Sala 3</span>
+          </label>
+        </div>
       </label>
       <label>
-        <span>Dia</span>
-        <input id="detail-day" type="text">
+        <span>Fecha</span>
+        <input id="detail-date" type="date">
       </label>
       <label>
-        <span>Horario</span>
-        <input id="detail-time" type="text">
+        <span>Inicio</span>
+        <select id="detail-start"></select>
+      </label>
+      <label>
+        <span>Fin</span>
+        <select id="detail-end"></select>
       </label>
       <label>
         <span>Asistentes</span>
@@ -187,6 +204,7 @@
     const modal = document.getElementById('event-detail-modal');
     const detailForm = document.getElementById('event-detail-form');
     let activeRow = null;
+    fillHourSelects();
 
     document.getElementById('new-event-btn')?.addEventListener('click', function () {
       window.location.href = '/solicitudes?new=1';
@@ -203,6 +221,13 @@
       if (!activeRow) return;
 
       if (activeRow.dataset.id) {
+        const selectedRooms = Array.from(detailForm.querySelectorAll('input[name="detail-room"]:checked')).map(function (input) {
+          return Number(input.value);
+        });
+        if (!selectedRooms.length) {
+          showToast('Selecciona al menos una sala.');
+          return;
+        }
         try {
           const response = await fetch(`/api/eventos/${activeRow.dataset.id}`, {
             method: 'PUT',
@@ -210,31 +235,26 @@
             body: JSON.stringify({
               titulo: document.getElementById('detail-event-name').value,
               descripcion: document.getElementById('detail-description').value,
-              fecha: activeRow.dataset.date,
-              hora_de_inicio: activeRow.dataset.start,
-              hora_de_termino: activeRow.dataset.end,
+              fecha: document.getElementById('detail-date').value,
+              hora_de_inicio: `${document.getElementById('detail-start').value}:00`,
+              hora_de_termino: `${document.getElementById('detail-end').value}:00`,
               no_de_asistentes: Number(document.getElementById('detail-attendees').value || 0),
-              salas_ids: [Number(document.getElementById('detail-room').value.replace(/[^0-9]/g, '') || 1)]
+              salas_ids: selectedRooms
             })
           });
-          if (!response.ok) throw new Error('No se pudo guardar el evento.');
+          if (!response.ok) {
+            const error = await response.json().catch(function () { return {}; });
+            throw new Error(error.detail || 'No se pudo guardar el evento.');
+          }
         } catch (error) {
           showToast(error.message);
           return;
         }
       }
 
-      activeRow.querySelector('.admin-strong').textContent = document.getElementById('detail-event-name').value;
-      activeRow.children[1].textContent = document.getElementById('detail-responsible').value;
-      activeRow.children[2].querySelector('.room-pill').textContent = document.getElementById('detail-room').value;
-      activeRow.children[3].textContent = document.getElementById('detail-day').value;
-      activeRow.children[4].textContent = document.getElementById('detail-time').value;
-      activeRow.children[5].textContent = document.getElementById('detail-attendees').value;
-      activeRow.dataset.search = activeRow.textContent.trim().toLowerCase();
-
       closeEventDetail();
-      applyFilters();
-      showToast(activeRow.dataset.id ? 'Evento actualizado en la base de datos.' : 'Cambios actualizados en la tabla.');
+      await loadEventsFromApi();
+      showToast('Evento actualizado en la base de datos.');
     });
 
     function openEventDetail(row, editable) {
@@ -242,17 +262,22 @@
       document.getElementById('event-detail-title').textContent = editable ? 'Editar evento' : 'Detalle de evento';
       document.getElementById('detail-event-name').value = row.querySelector('.admin-strong').textContent.trim();
       document.getElementById('detail-responsible').value = row.children[1].textContent.trim();
-      document.getElementById('detail-room').value = row.children[2].textContent.trim();
-      document.getElementById('detail-day').value = row.children[3].textContent.trim();
-      document.getElementById('detail-time').value = row.children[4].textContent.trim();
+      document.getElementById('detail-date').value = row.dataset.date || '';
+      document.getElementById('detail-start').value = (row.dataset.start || '08:00:00').slice(0, 5);
+      document.getElementById('detail-end').value = (row.dataset.end || '09:00:00').slice(0, 5);
       document.getElementById('detail-attendees').value = row.children[5].textContent.trim();
       document.getElementById('detail-description').value = row.dataset.description || 'Sin descripcion';
       document.getElementById('detail-layout').value = row.dataset.layout || 'Sin acomodo';
       document.getElementById('detail-requirements').value = row.dataset.requirements || 'Sin requerimientos';
+      const selectedRooms = (row.dataset.roomIds || '').split(',').filter(Boolean);
+      detailForm.querySelectorAll('input[name="detail-room"]').forEach(function (input) {
+        input.checked = selectedRooms.includes(input.value);
+      });
 
-      detailForm.querySelectorAll('input, textarea').forEach(function (input) {
+      detailForm.querySelectorAll('input, textarea, select').forEach(function (input) {
         const alwaysReadonly = input.id === 'detail-layout' || input.id === 'detail-requirements';
         input.readOnly = alwaysReadonly || !editable;
+        input.disabled = input.type === 'checkbox' || input.tagName === 'SELECT' ? !editable : false;
       });
       document.getElementById('event-detail-save').style.display = editable ? '' : 'none';
       modal.classList.remove('hidden');
@@ -282,6 +307,7 @@
 
         tableBody.innerHTML = events.map(function (item) {
           const roomNames = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
+          const roomIds = item.salas.map(function (sala) { return sala.numero_sala; });
           const roomKey = item.salas[0] ? 'sala' + item.salas[0].numero_sala : 'sala1';
           const requester = item.solicitud?.solicitante || {};
           const responsible = [requester.nombre, requester.apellido].filter(Boolean).join(' ') || 'Solicitante no asignado';
@@ -289,14 +315,14 @@
           const searchText = [item.titulo, item.descripcion, responsible, roomNames].join(' ').toLowerCase();
 
           return `
-            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-description="${escapeAttr(item.descripcion || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
-              <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
-              <td>${escapeHTML(responsible)}</td>
-              <td><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
-              <td>${formatDate(item.fecha)}</td>
-              <td class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
-              <td>${item.no_de_asistentes || 0}</td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action="view" type="button">Ver</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-room-ids="${escapeAttr(roomIds.join(','))}" data-description="${escapeAttr(item.descripcion || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
+              <td data-label="Evento"><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
+              <td data-label="Responsable">${escapeHTML(responsible)}</td>
+              <td data-label="Sala"><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
+              <td data-label="Dia">${formatDate(item.fecha)}</td>
+              <td data-label="Horario" class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
+              <td data-label="Asistentes">${item.no_de_asistentes || 0}</td>
+              <td data-label="Acciones"><div class="admin-action-row"><button class="admin-soft-button" data-action="view" type="button">Ver</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>
             </tr>
           `;
         }).join('');
@@ -345,6 +371,21 @@
       return { fecha: row.dataset.date };
     }
 
+    function fillHourSelects() {
+      ['detail-start', 'detail-end'].forEach(function (id) {
+        const select = document.getElementById(id);
+        if (!select) return;
+        select.innerHTML = '';
+        for (let hour = 8; hour <= 20; hour += 1) {
+          const value = `${String(hour).padStart(2, '0')}:00`;
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        }
+      });
+    }
+
     function updateEventStats(events) {
       const values = document.querySelectorAll('.admin-stat-card .admin-stat-value');
       if (!values.length) return;
@@ -375,7 +416,7 @@
     }
 
     function formatDate(value) {
-      return new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' });
+      return capitalize(new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }));
     }
 
     function escapeHTML(value) {

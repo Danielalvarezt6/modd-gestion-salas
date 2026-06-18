@@ -155,7 +155,7 @@ body {
 
 @media (max-width: 640px) {
   .modd-theme-toggle {
-    top: 0.75rem;
+    top: 1.15rem;
   }
 }
 
@@ -1284,6 +1284,46 @@ select:focus {
   gap: 0.5rem;
 }
 
+.modd-week-nav {
+  align-items: center;
+  background: var(--bg, var(--color-background));
+  border: 1px solid var(--border, var(--color-border));
+  border-radius: 0.55rem;
+  display: inline-flex;
+  gap: 0.25rem;
+  min-height: 2.5rem;
+  padding: 0.2rem;
+}
+
+.modd-week-nav button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.4rem;
+  color: var(--text, var(--color-text-primary));
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.25rem 0.65rem;
+}
+
+.modd-week-nav button:hover {
+  background: var(--surface, var(--color-surface));
+  color: var(--blue-600, var(--color-azul-institucional));
+}
+
+.modd-week-label {
+  color: var(--muted, var(--color-text-secondary));
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0 0.55rem;
+  white-space: nowrap;
+}
+
 .modd-room-chip {
   align-items: center;
   border: 1px solid var(--border, var(--color-border));
@@ -1665,7 +1705,7 @@ select:focus {
 }
 
 .modd-fullcalendar-wrap .fc-day-today {
-  background: color-mix(in srgb, var(--gold, #E1B73D) 18%, transparent) !important;
+  background: transparent !important;
 }
 
 .modd-fullcalendar-wrap .fc-col-header-cell-cushion,
@@ -1707,7 +1747,7 @@ select:focus {
 }
 
 [data-theme="dark"] .modd-fullcalendar-wrap .fc-day-today {
-  background: rgba(244, 205, 86, 0.16) !important;
+  background: transparent !important;
 }
 
 .modd-modal {
@@ -1775,6 +1815,7 @@ select:focus {
 
 .modd-form-grid input,
 .modd-form-grid select,
+.modd-form-grid textarea,
 .modd-notes-field textarea {
   background: var(--bg, var(--color-background));
   border: 1px solid var(--border, var(--color-border));
@@ -1784,6 +1825,20 @@ select:focus {
   min-height: 2.45rem;
   padding: 0.65rem 0.75rem;
   width: 100%;
+}
+
+.modd-form-grid textarea::placeholder,
+.modd-notes-field textarea::placeholder {
+  color: var(--muted, var(--color-text-secondary));
+}
+
+.modd-form-grid input[readonly],
+.modd-form-grid textarea[readonly],
+.modd-form-grid input:disabled,
+.modd-form-grid textarea:disabled {
+  background: color-mix(in srgb, var(--bg, var(--color-background)) 82%, var(--surface, var(--color-surface)));
+  color: var(--text, var(--color-text-primary));
+  opacity: 1;
 }
 
 .request-check-grid {
@@ -1946,5 +2001,388 @@ select:focus {
 
   .modd-modal-actions {
     flex-direction: column-reverse;
+  }
+}
+
+/* -----------------------------------------------------------------
+   Responsividad tablet y telefono
+   ----------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .admin-main,
+  .page-main {
+    padding: 1.25rem !important;
+  }
+
+  .admin-topbar,
+  .topbar {
+    align-items: flex-start !important;
+    padding-right: 3.25rem !important;
+  }
+
+  .admin-topbar-actions,
+  .topbar-right {
+    justify-content: flex-start;
+  }
+
+  .report-card,
+  .admin-hero-card,
+  .filter-panel {
+    padding: 1.25rem;
+  }
+
+  .modd-week-grid {
+    grid-template-columns: 64px repeat(var(--day-count, 7), minmax(220px, 1fr));
+    min-width: 960px;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .admin-shell,
+  .page-shell {
+    display: block !important;
+    min-height: 100vh;
+  }
+
+  .admin-topbar,
+  .topbar {
+    gap: 0.85rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .admin-title,
+  .topbar > div:first-child {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .admin-title h2,
+  .topbar h2 {
+    font-size: 1.35rem !important;
+  }
+
+  .admin-title p,
+  .topbar p {
+    font-size: 0.82rem !important;
+  }
+
+  .admin-topbar-actions {
+    width: 100%;
+  }
+
+  .admin-user-badge {
+    margin-left: auto;
+  }
+
+  .admin-primary-button,
+  .modd-primary-action,
+  .modd-secondary-action,
+  .modd-danger-action {
+    min-height: 2.75rem;
+  }
+
+  .admin-stat-grid {
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-stat-card {
+    padding: 1rem;
+  }
+
+  .admin-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .admin-table-wrap {
+    overflow: visible;
+  }
+
+  .admin-table {
+    border-collapse: separate;
+    border-spacing: 0 0.85rem;
+    min-width: 0;
+  }
+
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table tr {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, var(--color-border));
+    border-radius: 0.8rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .admin-table td {
+    align-items: flex-start;
+    border-bottom: 1px solid color-mix(in srgb, var(--border, #e5e8f0) 70%, transparent);
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: minmax(7rem, 32%) minmax(0, 1fr);
+    padding: 0.85rem 1rem;
+  }
+
+  .admin-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-table td::before {
+    color: var(--muted, var(--color-text-secondary));
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .admin-table td[colspan]::before,
+  .admin-table td:not([data-label])::before {
+    content: none;
+  }
+
+  .admin-action-row {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .admin-soft-button {
+    flex: 1 1 auto;
+  }
+
+  .report-grid,
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .modd-calendar-shell {
+    border-radius: 0.7rem;
+  }
+
+  .modd-calendar-header,
+  .modd-calendar-toolbar,
+  .modd-calendar-legends {
+    padding: 1rem !important;
+  }
+
+  .modd-room-filters,
+  .modd-legend-group,
+  .modd-week-nav {
+    width: 100%;
+  }
+
+  .modd-week-nav {
+    justify-content: center;
+  }
+
+  .modd-room-chip {
+    flex: 1 1 30%;
+    justify-content: center;
+  }
+
+  .modd-week-calendar {
+    border-top: 1px solid var(--border, var(--color-border));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modd-week-grid {
+    --hour-height: 68px;
+    grid-template-columns: 58px repeat(var(--day-count, 7), minmax(190px, 1fr));
+    min-width: 820px;
+  }
+
+  .modd-fullcalendar-wrap {
+    overflow-x: auto;
+  }
+
+  .modd-fullcalendar-wrap .fc {
+    min-width: 720px;
+  }
+
+  .request-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .modd-theme-toggle {
+    height: 2.35rem;
+    top: 1.05rem;
+    width: 2.45rem;
+  }
+
+  .admin-main,
+  .page-main {
+    padding: 0.85rem !important;
+  }
+
+  .admin-topbar,
+  .topbar {
+    padding-right: 2.6rem !important;
+  }
+
+  .admin-topbar-actions {
+    align-items: stretch;
+  }
+
+  .admin-topbar-actions .admin-primary-button {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .admin-user-badge strong {
+    display: none;
+  }
+
+  .admin-user-badge {
+    min-height: 2.45rem;
+    padding: 0.25rem;
+  }
+
+  .admin-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-stat-value {
+    font-size: 1.45rem;
+    text-align: center;
+  }
+
+  .admin-stat-label {
+    text-align: center;
+  }
+
+  .admin-field-with-icon,
+  .admin-input,
+  .admin-select {
+    min-height: 2.75rem;
+  }
+
+  .admin-table td {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .admin-action-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .admin-action-row .admin-soft-button {
+    grid-column: span 2;
+  }
+
+  .admin-icon-button {
+    width: 100%;
+  }
+
+  .report-card {
+    gap: 0.9rem;
+    grid-template-columns: 1fr;
+  }
+
+  .report-icon {
+    height: 3rem;
+    width: 3rem;
+  }
+
+  .modd-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modd-event-modal {
+    border-radius: 0.9rem 0.9rem 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+    padding: 1rem;
+    width: 100%;
+  }
+
+  .modd-modal-header {
+    align-items: flex-start;
+  }
+
+  .modd-form-grid,
+  .request-check-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modd-checkbox-card {
+    min-height: 2.75rem;
+  }
+
+  .modd-modal-actions {
+    align-items: stretch;
+  }
+
+  .modd-modal-action-spacer {
+    display: none;
+  }
+
+  .modd-calendar-header h3,
+  .modd-modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .modd-room-chip {
+    flex-basis: 100%;
+  }
+
+  .modd-week-nav {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr 2.4rem;
+  }
+
+  .modd-week-nav button {
+    width: 100%;
+  }
+
+  .modd-week-label {
+    grid-column: 1 / -1;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+  }
+
+  .modd-week-grid {
+    --hour-height: 64px;
+    grid-template-columns: 52px repeat(var(--day-count, 7), minmax(170px, 1fr));
+    min-width: 720px;
+  }
+
+  .modd-event-card {
+    padding: 0.35rem 0.45rem;
+  }
+
+  .page-toast {
+    bottom: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
+    right: 0.75rem;
   }
 }

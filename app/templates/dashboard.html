@@ -450,6 +450,10 @@
   }
 
   @media (max-width: 768px) {
+    .dashboard-wrap {
+      display: block;
+    }
+
     .sidebar {
       position: fixed;
       left: 0;
@@ -471,24 +475,99 @@
 
     .main-content {
       padding: 1rem;
+      overflow-x: hidden;
+    }
+
+    .topbar {
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      padding-right: 3rem;
+    }
+
+    .topbar-left {
+      width: 100%;
+    }
+
+    .topbar-left h2 {
+      font-size: 1.35rem;
+    }
+
+    .topbar-left p {
+      font-size: 0.82rem;
+    }
+
+    .topbar-right {
+      justify-content: flex-start;
+      width: 100%;
+    }
+
+    .topbar-right .admin-user-badge {
+      margin-left: auto;
     }
 
     .stats-grid {
       grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
     }
 
     .two-col {
       grid-template-columns: 1fr;
     }
 
-    .topbar-right .admin-user-badge strong {
-      display: none;
+    .panel-header {
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+
+    .panel-body {
+      padding: 0.4rem 0.75rem;
+    }
+
+    .table-mini td {
+      padding: 0.75rem 0.25rem;
+      vertical-align: top;
     }
   }
 
   @media (max-width: 480px) {
+    .main-content {
+      padding: 0.85rem;
+    }
+
+    .topbar {
+      padding-right: 2.6rem;
+    }
+
     .stats-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-card {
+      padding: 1rem;
+    }
+
+    .stat-card .stat-number {
+      font-size: 1.55rem;
+    }
+
+    .stat-card .stat-label,
+    .stat-card .stat-sub {
+      font-size: 0.68rem;
+    }
+
+    .fab-group {
+      display: grid;
       grid-template-columns: 1fr;
+    }
+
+    .btn-fab {
+      justify-content: center;
+      width: 100%;
+    }
+
+    .topbar-right .admin-user-badge strong {
+      display: none;
     }
   }
 

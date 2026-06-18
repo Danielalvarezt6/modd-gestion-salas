@@ -294,6 +294,17 @@
           <input id="calendar-search" type="search" placeholder="Buscar evento o responsable" autocomplete="off">
         </div>
 
+        <div class="modd-week-nav" aria-label="Navegar semanas">
+          <button type="button" id="calendar-prev-week" aria-label="Semana anterior" title="Semana anterior">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <button type="button" id="calendar-today-week">Hoy</button>
+          <button type="button" id="calendar-next-week" aria-label="Semana siguiente" title="Semana siguiente">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <span id="calendar-week-label" class="modd-week-label"></span>
+        </div>
+
         <div class="modd-room-filters" aria-label="Filtrar por sala">
           <label class="modd-room-chip sala1">
             <input type="checkbox" value="sala1" checked>
@@ -386,14 +397,21 @@
         <span>Fin</span>
         <input id="event-end" type="time" min="08:00" max="18:00" step="3600" required>
       </label>
-      <label>
-        <span>Sala</span>
-        <select id="event-room-single" required>
-          <option value="1">Sala 1</option>
-          <option value="2">Sala 2</option>
-          <option value="3">Sala 3</option>
-        </select>
-      </label>
+      <fieldset class="request-check-grid">
+        <legend>Salas</legend>
+        <label class="modd-checkbox-card">
+          <input name="event-room" type="checkbox" value="sala1" checked>
+          <span>Sala 1</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="event-room" type="checkbox" value="sala2">
+          <span>Sala 2</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="event-room" type="checkbox" value="sala3">
+          <span>Sala 3</span>
+        </label>
+      </fieldset>
       <label>
         <span>Asistentes</span>
         <input id="event-attendees" type="number" min="0" value="0">
