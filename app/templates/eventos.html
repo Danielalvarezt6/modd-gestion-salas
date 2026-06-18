@@ -36,7 +36,7 @@
       </div>
       <div class="admin-topbar-actions">
         <button class="admin-primary-button" id="new-event-btn" type="button">
-          <i data-lucide="plus" class="w-4 h-4"></i> Nuevo evento
+          <i data-lucide="file-plus" class="w-4 h-4"></i> Nueva solicitud
         </button>
         <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
           <i data-lucide="menu" class="w-6 h-6"></i>
@@ -126,13 +126,17 @@
         <span>Asistentes</span>
         <input id="detail-attendees" type="number" min="0">
       </label>
-      <label>
-        <span>Acomodo</span>
-        <input id="detail-layout" type="text" readonly>
+      <label class="modd-form-span">
+        <span>Descripcion</span>
+        <textarea id="detail-description" rows="3" readonly></textarea>
       </label>
-      <label>
+      <label class="modd-form-span">
+        <span>Acomodo</span>
+        <textarea id="detail-layout" rows="2" readonly></textarea>
+      </label>
+      <label class="modd-form-span">
         <span>Requerimientos</span>
-        <input id="detail-requirements" type="text" readonly>
+        <textarea id="detail-requirements" rows="3" readonly></textarea>
       </label>
     </div>
 
@@ -185,7 +189,7 @@
     let activeRow = null;
 
     document.getElementById('new-event-btn')?.addEventListener('click', function () {
-      window.location.href = '/calendario';
+      window.location.href = '/solicitudes?new=1';
     });
 
     bindEventActions();
@@ -205,7 +209,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               titulo: document.getElementById('detail-event-name').value,
-              descripcion: activeRow.querySelector('.event-name-line .admin-muted')?.textContent || '',
+              descripcion: document.getElementById('detail-description').value,
               fecha: activeRow.dataset.date,
               hora_de_inicio: activeRow.dataset.start,
               hora_de_termino: activeRow.dataset.end,
@@ -242,11 +246,13 @@
       document.getElementById('detail-day').value = row.children[3].textContent.trim();
       document.getElementById('detail-time').value = row.children[4].textContent.trim();
       document.getElementById('detail-attendees').value = row.children[5].textContent.trim();
+      document.getElementById('detail-description').value = row.dataset.description || 'Sin descripcion';
       document.getElementById('detail-layout').value = row.dataset.layout || 'Sin acomodo';
       document.getElementById('detail-requirements').value = row.dataset.requirements || 'Sin requerimientos';
 
-      detailForm.querySelectorAll('input').forEach(function (input) {
-        input.readOnly = !editable;
+      detailForm.querySelectorAll('input, textarea').forEach(function (input) {
+        const alwaysReadonly = input.id === 'detail-layout' || input.id === 'detail-requirements';
+        input.readOnly = alwaysReadonly || !editable;
       });
       document.getElementById('event-detail-save').style.display = editable ? '' : 'none';
       modal.classList.remove('hidden');
@@ -268,7 +274,7 @@
         if (!response.ok) throw new Error('No se pudieron cargar eventos.');
         const events = await response.json();
         if (!events.length) {
-          tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados. Crea uno desde el calendario con el boton Nuevo evento.</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados. Crea y aprueba una solicitud para generar un evento.</td></tr>';
           rows = [];
           updateEventStats([]);
           return;
@@ -283,14 +289,14 @@
           const searchText = [item.titulo, item.descripcion, responsible, roomNames].join(' ').toLowerCase();
 
           return `
-            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-description="${escapeAttr(item.descripcion || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
               <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
               <td>${escapeHTML(responsible)}</td>
               <td><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
               <td>${formatDate(item.fecha)}</td>
               <td class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
               <td>${item.no_de_asistentes || 0}</td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
+              <td><div class="admin-action-row"><button class="admin-soft-button" data-action="view" type="button">Ver</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>
             </tr>
           `;
         }).join('');
@@ -306,12 +312,37 @@
 
     function bindEventActions() {
       document.querySelectorAll('#events-table [data-action]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+        button.addEventListener('click', async function () {
           const row = button.closest('tr');
-          const isEdit = button.getAttribute('aria-label') === 'Editar';
+          if (button.dataset.action === 'delete') {
+            const confirmed = window.confirm('Eliminar este evento definitivamente? Tambien se eliminara su solicitud asociada.');
+            if (!confirmed) return;
+            try {
+              const response = await fetch(`/api/eventos/${row.dataset.id}`, { method: 'DELETE' });
+              if (!response.ok) {
+                const error = await response.json().catch(function () { return {}; });
+                throw new Error(error.detail || 'No se pudo eliminar el evento.');
+              }
+              row.remove();
+              rows = rows.filter(function (item) { return item !== row; });
+              updateEventStats(rows.map(rowToEventStat));
+              applyFilters();
+              showToast('Evento eliminado correctamente.');
+            } catch (error) {
+              showToast(error.message);
+            }
+            return;
+          }
+          const isEdit = button.dataset.action === 'edit';
           openEventDetail(row, isEdit);
         });
       });
+    }
+
+    function rowToEventStat(row) {
+      return { fecha: row.dataset.date };
     }
 
     function updateEventStats(events) {

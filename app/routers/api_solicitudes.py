@@ -22,8 +22,11 @@ def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
         fecha_solicitud=solicitud.fecha_solicitud,
         hora_de_solicitud=solicitud.hora_de_solicitud,
         solicitante_nombre=f"{solicitante.nombre} {solicitante.apellido}" if solicitante else "Sin solicitante",
+        solicitante_apellido=solicitante.apellido if solicitante else None,
         solicitante_correo=solicitante.correo if solicitante else "",
+        solicitante_telefono=solicitante.no_de_telefono if solicitante else None,
         evento_titulo=evento.titulo if evento else "Sin evento",
+        evento_descripcion=evento.descripcion if evento else None,
         evento_fecha=evento.fecha if evento else None,
         evento_inicio=evento.hora_de_inicio if evento else None,
         evento_fin=evento.hora_de_termino if evento else None,
@@ -36,7 +39,7 @@ def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
     )
 
 
-def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session):
+def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_evento_ignorado: int | None = None):
     if payload.evento_inicio >= payload.evento_fin:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -59,6 +62,8 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session):
     salas_ocupadas = set()
     hay_conflicto = False
     for evento in eventos_mismo_dia:
+        if id_evento_ignorado is not None and evento.id_evento == id_evento_ignorado:
+            continue
         if payload.evento_inicio < evento.hora_de_termino and payload.evento_fin > evento.hora_de_inicio:
             for item in evento.salas:
                 salas_ocupadas.add(item.numero_sala)
@@ -83,6 +88,18 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session):
         )
 
     return sala
+
+
+def _load_solicitud(db: Session, id_solicitud: int) -> Solicitud | None:
+    return db.execute(
+        select(Solicitud)
+        .where(Solicitud.id_solicitud == id_solicitud)
+        .options(
+            selectinload(Solicitud.solicitante),
+            selectinload(Solicitud.eventos).selectinload(Evento.salas),
+            selectinload(Solicitud.eventos).selectinload(Evento.requerimientos),
+        )
+    ).scalars().first()
 
 
 @router.get("/", response_model=List[SolicitudResumenOut])
@@ -167,6 +184,54 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
             selectinload(Solicitud.eventos).selectinload(Evento.requerimientos),
         )
     ).scalars().one()
+    return _solicitud_resumen(solicitud)
+
+
+@router.put("/{id_solicitud}", response_model=SolicitudResumenOut)
+async def actualizar_solicitud(
+    id_solicitud: int,
+    payload: SolicitudEventoCreate,
+    db: Session = Depends(get_db),
+):
+    solicitud = _load_solicitud(db, id_solicitud)
+    if not solicitud:
+      raise HTTPException(
+          status_code=status.HTTP_404_NOT_FOUND,
+          detail="La solicitud especificada no existe.",
+      )
+
+    evento = solicitud.eventos[0] if solicitud.eventos else None
+    sala = _validar_solape_evento(payload, db, id_evento_ignorado=evento.id_evento if evento else None)
+
+    solicitante = solicitud.solicitante or Solicitante(correo=payload.solicitante_correo)
+    solicitante.nombre = payload.solicitante_nombre
+    solicitante.apellido = payload.solicitante_apellido
+    solicitante.correo = payload.solicitante_correo
+    solicitante.no_de_telefono = payload.solicitante_telefono
+    solicitud.solicitante = solicitante
+
+    if not evento:
+        evento = Evento(solicitud=solicitud)
+        db.add(evento)
+
+    requerimientos = evento.requerimientos or Requerimientos()
+    evento.requerimientos = requerimientos
+
+    requerimientos.acomodo = payload.acomodo
+    requerimientos.equipo_de_sonido = payload.equipo_de_sonido
+    requerimientos.cafeteria = payload.cafeteria
+    requerimientos.videoconferencia = payload.videoconferencia
+
+    evento.titulo = payload.evento_titulo
+    evento.descripcion = payload.evento_descripcion
+    evento.fecha = payload.evento_fecha
+    evento.hora_de_inicio = payload.evento_inicio
+    evento.hora_de_termino = payload.evento_fin
+    evento.no_de_asistentes = payload.evento_asistentes
+    evento.salas = [sala]
+
+    db.commit()
+    solicitud = _load_solicitud(db, id_solicitud)
     return _solicitud_resumen(solicitud)
 
 

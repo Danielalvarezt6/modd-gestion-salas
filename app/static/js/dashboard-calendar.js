@@ -514,7 +514,7 @@
     if (!modal) return;
     hideModalAlert();
 
-    title.textContent = isExisting ? 'Editar evento' : 'Nuevo evento';
+    title.textContent = isExisting ? 'Editar evento' : 'Nueva solicitud';
     document.getElementById('event-id').value = eventData.id || '';
     document.getElementById('request-first-name').value = eventData.requestFirstName || '';
     document.getElementById('request-last-name').value = eventData.requestLastName || '';
@@ -611,7 +611,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cargaUtilAPI)
           })
-        : await createApprovedRequestFromModal(date, startTime, endTime, selectedRooms);
+        : await createRequestFromModal(date, startTime, endTime, selectedRooms);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -622,7 +622,7 @@
       await cargarEventosDesdeApi();
 
       closeEventModal();
-      showAlert('Evento guardado exitosamente en la base de datos.', 'success');
+      showAlert(id ? 'Evento actualizado correctamente.' : 'Solicitud creada correctamente. Apruebala en la seccion Solicitudes para que aparezca en el calendario.', 'success');
       rerenderActiveViews();
 
     } catch (error) {
@@ -699,7 +699,7 @@
     }
   }
 
-  async function createApprovedRequestFromModal(date, startTime, endTime, selectedRooms) {
+  async function createRequestFromModal(date, startTime, endTime, selectedRooms) {
     const payload = {
       solicitante_nombre: document.getElementById('request-first-name').value.trim(),
       solicitante_apellido: document.getElementById('request-last-name').value.trim(),
@@ -718,21 +718,11 @@
       videoconferencia: document.getElementById('event-video').checked
     };
 
-    const createResponse = await fetch('/api/solicitudes/', {
+    return fetch('/api/solicitudes/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!createResponse.ok) return createResponse;
-
-    const created = await createResponse.json();
-    const approveResponse = await fetch(`/api/solicitudes/${created.id_solicitud}/estado`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'aprobada' })
-    });
-
-    return approveResponse.ok ? createResponse : approveResponse;
   }
 
   function warnExistingConflicts() {

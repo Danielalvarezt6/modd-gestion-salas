@@ -128,7 +128,7 @@
     <div class="modd-modal-header">
       <div>
         <p class="modd-section-kicker">Nueva solicitud</p>
-        <h3>Registrar solicitud de sala</h3>
+        <h3 id="request-create-title">Registrar solicitud de sala</h3>
       </div>
       <button type="button" class="modd-icon-button" data-request-create-close aria-label="Cerrar modal">
         <i data-lucide="x" class="w-5 h-5"></i>
@@ -232,6 +232,7 @@
     let rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
     const cards = Array.from(document.querySelectorAll('[data-status-card]'));
     let activeStatus = 'todas';
+    let editingRequestId = null;
 
     function closeSidebar() {
       sidebar.classList.remove('open');
@@ -319,7 +320,10 @@
     }
 
     function openCreateRequest() {
+      editingRequestId = null;
       createForm?.reset();
+      document.getElementById('request-create-title').textContent = 'Registrar solicitud de sala';
+      createForm.querySelector('button[type="submit"]').textContent = 'Guardar solicitud';
       fillHourSelects();
       if (createForm?.elements.evento_fecha) {
         createForm.elements.evento_fecha.value = new Date().toISOString().slice(0, 10);
@@ -329,7 +333,36 @@
       document.body.style.overflow = 'hidden';
     }
 
+    function openEditRequest(row) {
+      editingRequestId = row.dataset.id;
+      createForm?.reset();
+      fillHourSelects();
+      document.getElementById('request-create-title').textContent = 'Editar solicitud';
+      createForm.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
+
+      createForm.elements.solicitante_nombre.value = row.dataset.firstName || '';
+      createForm.elements.solicitante_apellido.value = row.dataset.lastName || '';
+      createForm.elements.solicitante_correo.value = row.dataset.email || '';
+      createForm.elements.solicitante_telefono.value = row.dataset.phone || '';
+      createForm.elements.evento_titulo.value = row.dataset.eventTitle || '';
+      createForm.elements.evento_descripcion.value = row.dataset.description || '';
+      createForm.elements.evento_fecha.value = row.dataset.eventDate || '';
+      createForm.elements.evento_inicio.value = (row.dataset.start || '08:00:00').slice(0, 5);
+      createForm.elements.evento_fin.value = (row.dataset.end || '09:00:00').slice(0, 5);
+      createForm.elements.sala_id.value = row.dataset.roomId || '1';
+      createForm.elements.evento_asistentes.value = row.dataset.attendees || 0;
+      createForm.elements.acomodo.value = row.dataset.layout || '';
+      createForm.elements.equipo_de_sonido.checked = row.dataset.audio === 'true';
+      createForm.elements.cafeteria.checked = row.dataset.catering === 'true';
+      createForm.elements.videoconferencia.checked = row.dataset.video === 'true';
+
+      createModal.classList.remove('hidden');
+      createModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
     function closeCreateRequest() {
+      editingRequestId = null;
       createModal.classList.add('hidden');
       createModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
@@ -357,8 +390,9 @@
       };
 
       try {
-        const response = await fetch('/api/solicitudes/', {
-          method: 'POST',
+        const wasEditing = Boolean(editingRequestId);
+        const response = await fetch(editingRequestId ? `/api/solicitudes/${editingRequestId}` : '/api/solicitudes/', {
+          method: editingRequestId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
@@ -368,7 +402,7 @@
         }
         closeCreateRequest();
         await loadRequestsFromApi();
-        showToast('Solicitud creada correctamente.');
+        showToast(wasEditing ? 'Solicitud actualizada correctamente.' : 'Solicitud creada correctamente.');
         if (window.location.search.includes('new=1')) {
           window.history.replaceState({}, '', '/solicitudes');
         }
@@ -394,16 +428,18 @@
         tableBody.innerHTML = requests.map(function (item) {
           const estado = item.estado || 'pendiente';
           const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
+          const salaId = item.salas[0] ? item.salas[0].numero_sala : 1;
           const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
           const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
           const requerimientos = formatRequirements(item);
           const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
+          const firstName = requesterFirstName(item);
           const action = estado === 'pendiente'
-            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>'
-            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>'
+            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
 
           return `
-            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}">
+            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-id="${salaId}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}">
               <td class="admin-muted">${item.id_solicitud}</td>
               <td><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
               <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
@@ -447,7 +483,11 @@
             }
             return;
           }
-          if (button.dataset.action === 'view' || button.dataset.action === 'edit') {
+          if (button.dataset.action === 'edit') {
+            openEditRequest(row);
+            return;
+          }
+          if (button.dataset.action === 'view') {
             openRequestDetail(row);
             return;
           }
@@ -468,14 +508,7 @@
               body: JSON.stringify({ estado: nextStatus })
             });
             if (!response.ok) throw new Error('No se pudo actualizar la solicitud.');
-            row.dataset.status = nextStatus;
-            row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
-            row.querySelector('.status-pill').textContent = capitalize(nextStatus);
-            row.querySelector('.admin-action-row').innerHTML = '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
-            bindRequestActions();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-            updateStats();
-            applyFilters();
+            await loadRequestsFromApi();
             showToast('Solicitud actualizada correctamente.');
           } catch (error) {
             showToast(error.message);
@@ -526,6 +559,15 @@
       if (item.cafeteria) values.push('Cafeteria');
       if (item.videoconferencia) values.push('Videoconferencia');
       return values.join(', ') || 'Sin requerimientos';
+    }
+
+    function requesterFirstName(item) {
+      const fullName = item.solicitante_nombre || '';
+      const lastName = item.solicitante_apellido || '';
+      if (lastName && fullName.endsWith(' ' + lastName)) {
+        return fullName.slice(0, -(lastName.length + 1));
+      }
+      return fullName;
     }
 
     function escapeHTML(value) {

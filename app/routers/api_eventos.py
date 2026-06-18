@@ -96,37 +96,12 @@ async def obtener_evento(id_evento: int, db: Session = Depends(get_db)):
         )
     return evento
 
-
 @router.post("/", response_model=EventoOut, status_code=status.HTTP_201_CREATED)
 async def crear_evento(evento: EventoCreate, db: Session = Depends(get_db)):
-    validar_horario_evento(evento, db)
-    nuevo_evento = Evento(
-        titulo=evento.titulo,
-        descripcion=evento.descripcion,
-        fecha=evento.fecha,
-        hora_de_inicio=evento.hora_de_inicio,
-        hora_de_termino=evento.hora_de_termino,
-        no_de_asistentes=evento.no_de_asistentes,
-        id_solicitud=evento.id_solicitud,
-        id_requerimientos=evento.id_requerimientos,
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="No se pueden crear eventos directamente. Primero registra una solicitud y apruebala."
     )
-
-    if evento.salas_ids:
-        stmt = select(Sala).where(Sala.numero_sala.in_(evento.salas_ids))
-        salas_asignadas = db.execute(stmt).scalars().all()
-
-        if len(salas_asignadas) != len(evento.salas_ids):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Una o más salas especificadas no existen.",
-            )
-
-        nuevo_evento.salas = salas_asignadas
-
-    db.add(nuevo_evento)
-    db.commit()
-    db.refresh(nuevo_evento)
-    return nuevo_evento
 
 
 @router.put("/{id_evento}", response_model=EventoOut)

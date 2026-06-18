@@ -1,6 +1,7 @@
 import io
 import unicodedata
 from datetime import date, timedelta
+from textwrap import wrap
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -105,6 +106,15 @@ class SimplePDF:
             x += width
         self.y -= gap
 
+    def wrapped_text(self, label, value, x=None, width_chars=96, size=8.5, bold_label=True):
+        text = "" if value is None else str(value)
+        if not text:
+            return
+        prefix = f"{label}: " if label else ""
+        lines = wrap(prefix + text, width=width_chars) or [prefix + text]
+        for index, line in enumerate(lines):
+            self.text(line, x=x, size=size, bold=bold_label and index == 0, gap=11)
+
     def build(self) -> bytes:
         if self.lines:
             self.pages.append("\n".join(self.lines))
@@ -171,30 +181,29 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
         pdf.row([item["sala"], item["eventos"], item["asistentes"]], [180, 130, 130])
     pdf.rule()
     pdf.text("Detalle de eventos", size=12, bold=True)
-    pdf.row(["Fecha", "Horario", "Evento", "Sala"], [72, 78, 240, 100], bold=True)
     if not eventos:
         pdf.text("No hay eventos para los filtros seleccionados.", size=10)
     for evento in eventos:
         salas = ", ".join(f"Sala {sala.numero_sala}" for sala in evento.salas) or "Sin sala"
+        pdf.ensure_space(92)
+        pdf.row(
+            ["Fecha", "Horario", "Sala", "Asistentes"],
+            [92, 110, 150, 100],
+            bold=True,
+            gap=13,
+        )
         pdf.row(
             [
                 evento.fecha,
                 f"{evento.hora_de_inicio.strftime('%H:%M')}-{evento.hora_de_termino.strftime('%H:%M')}",
-                evento.titulo,
                 salas,
+                evento.no_de_asistentes or 0,
             ],
-            [72, 78, 240, 100],
+            [92, 110, 150, 100],
+            gap=14,
         )
-        pdf.row(
-            [
-                "",
-                "",
-                f"{evento.no_de_asistentes or 0} asistentes",
-                "",
-            ],
-            [72, 78, 240, 100],
-            size=7.5,
-        )
+        pdf.wrapped_text("Evento", evento.titulo, width_chars=98, size=9)
+        pdf.wrapped_text("Descripcion", evento.descripcion, width_chars=98, size=8.2, bold_label=False)
         if evento.requerimientos:
             extras = []
             if evento.requerimientos.acomodo:
@@ -206,7 +215,8 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
             if evento.requerimientos.videoconferencia:
                 extras.append("Videoconferencia")
             if extras:
-                pdf.row(["", "", " | ".join(extras), ""], [72, 78, 240, 100], size=7.2)
+                pdf.wrapped_text("Requerimientos", " | ".join(extras), width_chars=98, size=8.2, bold_label=False)
+        pdf.rule()
     return pdf.build()
 
 

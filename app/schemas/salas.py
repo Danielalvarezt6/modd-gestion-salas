@@ -89,8 +89,11 @@ class SolicitudResumenOut(BaseModel):
     fecha_solicitud: date
     hora_de_solicitud: time
     solicitante_nombre: str
+    solicitante_apellido: Optional[str] = None
     solicitante_correo: str
+    solicitante_telefono: Optional[str] = None
     evento_titulo: Optional[str] = None
+    evento_descripcion: Optional[str] = None
     evento_fecha: Optional[date] = None
     evento_inicio: Optional[time] = None
     evento_fin: Optional[time] = None
