@@ -6,8 +6,9 @@ sala_evento = Table(
     "sala_evento",
     Base.metadata,
     Column("numero_sala", Integer, ForeignKey("sala.numero_sala"), primary_key=True),
-    Column("id_evento", Integer, ForeignKey("evento.id_evento"), primary_key=True)
+    Column("id_evento", Integer, ForeignKey("evento.id_evento"), primary_key=True),
 )
+
 
 class Sala(Base):
     __tablename__ = "sala"
@@ -16,6 +17,7 @@ class Sala(Base):
     capacidad = Column(Integer, nullable=False)
 
     eventos = relationship("Evento", secondary=sala_evento, back_populates="salas")
+
 
 class Solicitante(Base):
     __tablename__ = "solicitante"
@@ -28,6 +30,7 @@ class Solicitante(Base):
 
     solicitudes = relationship("Solicitud", back_populates="solicitante")
 
+
 class Solicitud(Base):
     __tablename__ = "solicitud"
 
@@ -35,10 +38,13 @@ class Solicitud(Base):
     fecha_solicitud = Column(Date, nullable=False)
     hora_de_solicitud = Column(Time, nullable=False)
 
+    estado = Column(String)
+
     id_solicitante = Column(Integer, ForeignKey("solicitante.id_solicitante"))
 
     solicitante = relationship("Solicitante", back_populates="solicitudes")
-    eventos =  relationship("Evento", back_populates="solicitud")
+    eventos = relationship("Evento", back_populates="solicitud")
+
 
 class Requerimientos(Base):
     __tablename__ = "requerimientos"
@@ -50,6 +56,7 @@ class Requerimientos(Base):
     videoconferencia = Column(Boolean, default=False)
 
     eventos = relationship("Evento", back_populates="requerimientos")
+
 
 class Evento(Base):
     __tablename__ = "evento"
