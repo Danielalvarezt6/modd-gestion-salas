@@ -435,8 +435,8 @@
           const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
           const firstName = requesterFirstName(item);
           const action = estado === 'pendiente'
-            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>'
-            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>'
+            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>';
 
           return `
             <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-id="${salaId}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}">
@@ -454,6 +454,7 @@
 
         rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
         bindRequestActions();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         updateStats();
         applyFilters();
       } catch (error) {
