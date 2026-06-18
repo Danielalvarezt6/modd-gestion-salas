@@ -16,53 +16,55 @@ MODD es una aplicación web diseñada para la administración y reserva de las s
 ```text
 modd-gestion-salas/
 │
-├── .env                        # Variables de entorno (credenciales, puerto, base de datos)
-├── requirements.txt            # Dependencias del proyecto (FastAPI, Uvicorn, Jinja2, etc.)
+├── .env/                    # entorno virtual de Python
+├── .env.example             # Plantilla de contraseñas de ejemplo
+├── .gitignore               # Lista negra de archivos que Git debe ignorar
+├── README.md  
+├── requirements.txt         # Lista de dependencias
+├── alembic.ini              # Archivo de configuración maestro de Alembic
+├── forzar_admin.py          # Script de "fuerza bruta" para inyectar admins (uso interno)
+├── seed.py                  # Script estándar de inyección de datos (opcional)
 │
-└── app/                        # Directorio principal del módulo de la aplicación
+├── alembic/                 # CARPETA DE MIGRACIONES (Base de Datos)
+│   ├── env.py               # Puente que conecta Alembic con tu config.py y tus modelos
+│   ├── script.py.mako       # Plantilla base de Alembic
+│   └── versions/            # Historial de todos los cambios en tus tablas
+│       └── 25b4a2a8460d_creacion_inicial_tablas_modd.py  # La migración de las tablas
+│
+└── app/                     # NÚCLEO DE LA APLICACIÓN FASTAPI
     ├── __init__.py
-    ├── main.py                 # Punto de entrada de Uvicorn, configuración de FastAPI y CORS
+    ├── main.py              # Donde se unen rutas, frontend y se levanta el servidor.
     │
-    ├── routers/                # Enrutadores (Controladores de los endpoints)
+    ├── core/                # CONFIGURACIONES CENTRALES
     │   ├── __init__.py
-    │   ├── views.py            # Rutas visuales que renderizan las plantillas Jinja2
-    │   ├── api_auth.py         # Endpoints REST para autenticación (recibe el POST del login)
-    │   └── api_salas.py        # Endpoints REST para enviar JSONs al dashboard (Fase 2)
+    │   ├── config.py        # Lógica de Pydantic que lee el archivo .env.local
+    │   ├── database.py      # Motor de SQLAlchemy (SessionLocal, Base)
+    │   └── security.py      # Lógica de encriptación y creación de Tokens JWT
     │
-    ├── templates/              # Plantillas visuales (Frontend renderizado por servidor)
-    │   ├── base.html           # Plantilla maestra con cabeceras y Tailwind
-    │   ├── landing.html        # Página principal de información
-    │   ├── login.html          # Formulario de inicio de sesión con fetch asíncrono
-    │   └── dashboard.html      # Pantalla de éxito tras el inicio de sesión
+    ├── models/              # PLANOS DE LA BASE DE DATOS (SQLAlchemy)
+    │   ├── __init__.py
+    │   ├── usuarios.py      # Clase Usuario (id, correo, hashed_password)
+    │   └── salas.py         # Clases Sala, Solicitante, Evento, Requerimientos, etc.
     │
-    ├── static/                 # Archivos estáticos públicos
+    ├── routers/             # CONTROLADORES DE TRÁFICO (Endpoints)
+    │   ├── __init__.py
+    │   ├── views.py         # Rutas visuales que devuelven el HTML (Ej: GET /login)
+    │   ├── api_auth.py      # Lógica de inicio/cierre sesión (Ej: POST /api/auth/login)
+    │   └── api_salas.py     # (Próximamente) Rutas para crear, 
+    │
+    ├── schemas/             
+    │   └── __init__.py      # Aquí irán las reglas de qué datos son obligatorios al crear cosas
+    │
+    ├── static/             
     │   ├── css/
-    │   │   └── custom.css      # Estilos personalizados (colores, sombras, utilidades)
+    │   │   └── custom.css
     │   ├── js/
-    │   │   └── landing.js      # Interactividad del frontend
     │   └── assets/
-    │       └── logo.png        # Recursos gráficos y multimedia
+    │       └── logo.png
     │
-    ├── core/                   # (En preparación) Lógica central y configuraciones
-    │   ├── __init__.py
-    │   ├── config.py           
-    │   ├── database.py         # Aquí irá el 'engine' y la conexión a PostgreSQL
-    │   └── security.py         
-    │
-    ├── models/                 # (En preparación) Modelos ORM (Traducción del diagrama E-R)
-    │   ├── __init__.py
-    │   ├── usuarios.py         
-    │   └── salas.py            
-    │
-    ├── schemas/                # (En preparación) Esquemas de validación de Pydantic
-    │   ├── __init__.py
-    │   ├── usuarios.py         
-    │   └── salas.py            
-    │
-    └── crud/                   # (En preparación) Operaciones directas a la base de datos
-        ├── __init__.py
-        ├── usuarios.py         
-        └── salas.py
+    └── templates/          
+        ├── login.html
+        └── dashboard.html   
 ```
 
 ---
@@ -96,9 +98,39 @@ modd-gestion-salas/
    pip install -r requirements.txt
    ```
 
-4. **Ejecutar el servidor de desarrollo:**
+4. **Crear la Base de Datos en PostgreSQL**
    ```bash
-    uvicorn app.main:app --reload
+   Abre tu consola de PostgreSQL (sudo -u postgres psql) y ejecuta:
+   CREATE USER tu_usuario WITH PASSWORD 'tu_contraseña';
+   CREATE DATABASE modd_db;
+   GRANT ALL PRIVILEGES ON DATABASE modd_db TO tu_usuario;
+   \c modd_db
+   GRANT ALL ON SCHEMA public TO tu_usuario;
+   \q
+   ```
+
+5. **Configurar Variables de entorno:**
+   Crea un archivo llamado ```.env.local``` en la raíz del proyecto.
+   Copia el contenido de .env.exaple y pon las credenciales que acabas de crear en PostgreSQL:
+   ```bash
+    DATABASE_URL=postgresql://tu_usuario:tu_contraseña@localhost:5432/modd_db
+	SECRET_KEY=escribe_aqui_una_llave_aleatoria
+	ALGORITHM=HS256
+	ACCESS_TOKEN_EXPIRE_MINUTES=60
+   ```
+6. **Crear las tablas (Alembic)**
+No necesitas crear nuevas migraciones. Solo aplica la estructura que ya está en el códio ejecutando:
+	```bash
+	alembic upgrade head
+	```
+7. **Inyectar el Administrador de Prueba**
+Para poder iniciar sesión, se necesita un usuario en la base de datos. Abre el archivo forzar_admin.py, pon temporalmente tu contraseña de PostgreSQL en la linea ```DATABASE_URL``` y ejecuta:
+	```bash
+	python forzar_admin.py
+	```
+8. **Levantar el servidor**
+   ```bash
+   uvicorn app.main:app --reload
    ```
    *Nota: El servidor iniciará en http://localhost:8000*
 
