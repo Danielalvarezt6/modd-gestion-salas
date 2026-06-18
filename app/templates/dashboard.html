@@ -24,21 +24,21 @@
   }
 
   [data-theme="dark"] {
-    --blue-600: #5b7bd6;
-    --blue-700: #4a6bc9;
-    --blue-50: #1a1f3a;
+    --blue-600: #8da8ff;
+    --blue-700: #6f8be8;
+    --blue-50: rgba(91, 123, 214, 0.16);
     --blue-100: #252d4d;
-    --gold: #ffc107;
+    --gold: #f4cd56;
     --gold-light: #332700;
-    --green: #81c784;
+    --green: #85d17b;
     --green-light: #1b3d1b;
-    --red: #ef5350;
-    --red-light: #3d1a1a;
-    --border: #3a4456;
-    --text: #e0e0e0;
-    --muted: #a0a0a0;
-    --surface: #1e1e2e;
-    --bg: #121218;
+    --red: #ff7770;
+    --red-light: rgba(213, 67, 60, 0.16);
+    --border: #30384d;
+    --text: #f3f6ff;
+    --muted: #b7c0d6;
+    --surface: #1b2030;
+    --bg: #11131a;
   }
 
   /* ── Layout ── */
@@ -206,27 +206,6 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-
-  .topbar-right .user-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 999px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .topbar-right .user-badge img {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    object-fit: cover;
-    background: var(--blue-100);
   }
 
   /* ── Stats grid ── */
@@ -512,7 +491,7 @@
       grid-template-columns: 1fr;
     }
 
-    .topbar-right .user-badge span {
+    .topbar-right .admin-user-badge strong {
       display: none;
     }
   }
@@ -570,9 +549,6 @@
       <a href="/reportes">
         <i data-lucide="bar-chart-2"></i> Reportes
       </a>
-      <a href="#">
-        <i data-lucide="building-2"></i> Salas
-      </a>
     </nav>
 
     <hr class="sidebar-divider">
@@ -596,10 +572,7 @@
         <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <div class="user-badge">
-          <img src="https://ui-avatars.com/api/?name=Admin+UNISON&background=24398A&color=fff&size=32" alt="Avatar">
-          <span>Administrador</span>
-        </div>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
         <!-- El tema se maneja desde base.html con su propio botón, así que no lo duplicamos -->
       </div>
     </div>
@@ -609,130 +582,59 @@
       <a class="btn-fab btn-fab-primary" href="/calendario">
         <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Evento
       </a>
-      <button class="btn-fab btn-fab-secondary" onclick="alert('Abrir formulario de nueva solicitud')">
+      <a class="btn-fab btn-fab-secondary" href="/solicitudes?new=1">
         <i data-lucide="file-plus" class="w-4 h-4"></i> Nueva Solicitud
-      </button>
+      </a>
     </div>
 
     <!-- Estadísticas -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Eventos de hoy</div>
-        <div class="stat-number"><span class="highlight-blue">4</span></div>
-        <div class="stat-sub">2 en Sala 1, 1 en Sala 2, 1 en Sala 3</div>
+        <div class="stat-number"><span class="highlight-blue" id="stat-events-today">0</span></div>
+        <div class="stat-sub" id="stat-events-today-sub">Sin eventos programados hoy</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Solicitudes pendientes</div>
-        <div class="stat-number"><span class="highlight-gold">5</span></div>
-        <div class="stat-sub">Requieren revisión</div>
+        <div class="stat-number"><span class="highlight-gold" id="stat-pending-requests">0</span></div>
+        <div class="stat-sub" id="stat-pending-requests-sub">Sin solicitudes pendientes</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Salas ocupadas ahora</div>
-        <div class="stat-number"><span class="highlight-green">2</span> / 3</div>
-        <div class="stat-sub">Sala 1 y Sala 2 en uso</div>
+        <div class="stat-number"><span class="highlight-green" id="stat-rooms-now">0</span> / 3</div>
+        <div class="stat-sub" id="stat-rooms-now-sub">Sin salas ocupadas ahora</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Eventos esta semana</div>
-        <div class="stat-number"><span class="highlight-red">18</span></div>
-        <div class="stat-sub">+3 vs semana pasada</div>
+        <div class="stat-number"><span class="highlight-red" id="stat-week-events">0</span></div>
+        <div class="stat-sub" id="stat-week-events-sub">Eventos activos de la semana</div>
       </div>
     </div>
 
 
     <!-- Dos columnas: eventos próximos y solicitudes recientes -->
     <div class="two-col">
-      <!-- Próximos eventos -->
+      <!-- Proximos eventos -->
       <div class="panel">
         <div class="panel-header">
-          <h3>📅 Próximos eventos</h3>
-          <a href="#">Ver todos</a>
+          <h3>Proximos eventos</h3>
+          <a href="/eventos">Ver todos</a>
         </div>
         <div class="panel-body">
-          <table class="table-mini">
-            <tr>
-              <td>
-                <div class="event-title">Taller de Innovación</div>
-                <div class="event-meta">Sala 1 · 10:00 - 12:00</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-approved">Aprobado</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Reunión Académica</div>
-                <div class="event-meta">Sala 2 · 13:00 - 14:30</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-pending">Pendiente</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Conferencia STEM</div>
-                <div class="event-meta">Sala 3 · 15:00 - 17:00</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-approved">Aprobado</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Clase de Diseño</div>
-                <div class="event-meta">Sala 1 · 08:00 - 09:30</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-cancelled">Cancelado</span>
-              </td>
-            </tr>
+          <table class="table-mini" id="dashboard-events-table">
+            <tbody><tr><td class="empty-state">No hay eventos proximos registrados.</td></tr></tbody>
           </table>
         </div>
       </div>
-
       <!-- Solicitudes recientes -->
       <div class="panel">
         <div class="panel-header">
-          <h3>📋 Solicitudes recientes</h3>
-          <a href="#">Ver todas</a>
+          <h3>Solicitudes recientes</h3>
+          <a href="/solicitudes">Ver todas</a>
         </div>
         <div class="panel-body">
-          <table class="table-mini">
-            <tr>
-              <td>
-                <div class="event-title">Seminario de Investigación</div>
-                <div class="event-meta">Sala 2 · 18 Jun</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-pending">Pendiente</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Reunión de Consejo</div>
-                <div class="event-meta">Sala 1 · 20 Jun</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-approved">Aprobada</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Taller de Emprendimiento</div>
-                <div class="event-meta">Sala 3 · 22 Jun</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-rejected">Rechazada</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="event-title">Presentación de Proyectos</div>
-                <div class="event-meta">Sala 1 · 24 Jun</div>
-              </td>
-              <td style="text-align:right;">
-                <span class="badge-status badge-pending">Pendiente</span>
-              </td>
-            </tr>
+          <table class="table-mini" id="dashboard-requests-table">
+            <tbody><tr><td class="empty-state">No hay solicitudes registradas.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -741,26 +643,12 @@
     <!-- (Opcional) Más contenido, ejemplo: actividad reciente o gráfico -->
     <div class="panel" style="margin-bottom: 2rem;">
       <div class="panel-header">
-        <h3>📊 Ocupación de salas (hoy)</h3>
-        <a href="#">Ver detalle</a>
+        <h3>Ocupacion de salas (hoy)</h3>
+        <a href="/calendario">Ver detalle</a>
       </div>
       <div class="panel-body" style="padding: 1.5rem;">
-        <div style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
-          <div style="text-align:center;">
-            <div style="font-weight:700; color:var(--blue-600);">Sala 1</div>
-            <div style="font-size:2rem; font-weight:800; color:var(--blue-600);">60%</div>
-            <div style="font-size:0.75rem; color:var(--muted);">3 de 5 horas ocupadas</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-weight:700; color:var(--green);">Sala 2</div>
-            <div style="font-size:2rem; font-weight:800; color:var(--green);">40%</div>
-            <div style="font-size:0.75rem; color:var(--muted);">2 de 5 horas ocupadas</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-weight:700; color:var(--gold);">Sala 3</div>
-            <div style="font-size:2rem; font-weight:800; color:var(--gold);">20%</div>
-            <div style="font-size:0.75rem; color:var(--muted);">1 de 5 horas ocupadas</div>
-          </div>
+        <div id="dashboard-occupancy" style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
+          <div class="empty-state">Sin eventos programados hoy.</div>
         </div>
       </div>
     </div>
@@ -827,12 +715,200 @@
       window.location.href = '/login';
     });
 
-    // Ejemplo de botón "Nuevo Evento" / "Nueva Solicitud" (mock)
-    document.querySelectorAll('.btn-fab').forEach(btn => {
-      btn.addEventListener('click', function (e) {
-        // Ya tienen alert, pero se puede mejorar
+    loadDashboardData();
+
+    async function loadDashboardData() {
+      try {
+        const [eventsResponse, requestsResponse] = await Promise.all([
+          fetch('/api/eventos/'),
+          fetch('/api/solicitudes/')
+        ]);
+        if (!eventsResponse.ok || !requestsResponse.ok) {
+          throw new Error('No se pudo cargar la informacion del dashboard.');
+        }
+        const events = await eventsResponse.json();
+        const requests = await requestsResponse.json();
+        renderDashboardStats(events, requests);
+        renderUpcomingEvents(events);
+        renderRecentRequests(requests);
+        renderOccupancy(events);
+      } catch (error) {
+        document.querySelector('#dashboard-events-table tbody').innerHTML = '<tr><td class="empty-state">No se pudieron cargar los eventos.</td></tr>';
+        document.querySelector('#dashboard-requests-table tbody').innerHTML = '<tr><td class="empty-state">No se pudieron cargar las solicitudes.</td></tr>';
+        document.getElementById('dashboard-occupancy').innerHTML = `<div class="empty-state">${escapeHTML(error.message)}</div>`;
+      }
+    }
+
+    function renderDashboardStats(events, requests) {
+      const today = localDateKey(new Date());
+      const nowMinutes = minutesFromDate(new Date());
+      const start = startOfWeek(new Date());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const activeEvents = events.filter(event => event.estado_evento !== 'cancelado');
+      const eventsToday = activeEvents.filter(event => event.fecha === today);
+      const pendingRequests = requests.filter(request => request.estado === 'pendiente');
+      const weekEvents = activeEvents.filter(event => {
+        const date = parseDate(event.fecha);
+        return date >= start && date <= end;
       });
-    });
+      const occupiedRooms = new Set();
+      eventsToday.forEach(event => {
+        if (minutesFromTime(event.hora_de_inicio) <= nowMinutes && minutesFromTime(event.hora_de_termino) > nowMinutes) {
+          (event.salas || []).forEach(sala => occupiedRooms.add(sala.numero_sala));
+        }
+      });
+
+      document.getElementById('stat-events-today').textContent = eventsToday.length;
+      document.getElementById('stat-events-today-sub').textContent = describeRooms(eventsToday);
+      document.getElementById('stat-pending-requests').textContent = pendingRequests.length;
+      document.getElementById('stat-pending-requests-sub').textContent = pendingRequests.length === 1 ? 'Requiere revision' : 'Requieren revision';
+      document.getElementById('stat-rooms-now').textContent = occupiedRooms.size;
+      document.getElementById('stat-rooms-now-sub').textContent = occupiedRooms.size ? `Sala ${Array.from(occupiedRooms).sort().join(', Sala ')} en uso` : 'Sin salas ocupadas ahora';
+      document.getElementById('stat-week-events').textContent = weekEvents.length;
+      document.getElementById('stat-week-events-sub').textContent = 'Eventos activos de la semana';
+    }
+
+    function renderUpcomingEvents(events) {
+      const tbody = document.querySelector('#dashboard-events-table tbody');
+      const nowKey = localDateKey(new Date());
+      const nowMinutes = minutesFromDate(new Date());
+      const upcoming = events
+        .filter(event => event.estado_evento !== 'cancelado')
+        .filter(event => event.fecha > nowKey || (event.fecha === nowKey && minutesFromTime(event.hora_de_termino) >= nowMinutes))
+        .sort((a, b) => `${a.fecha} ${a.hora_de_inicio}`.localeCompare(`${b.fecha} ${b.hora_de_inicio}`))
+        .slice(0, 5);
+
+      if (!upcoming.length) {
+        tbody.innerHTML = '<tr><td class="empty-state">No hay eventos proximos registrados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = upcoming.map(event => {
+        const rooms = (event.salas || []).map(sala => `Sala ${sala.numero_sala}`).join(', ') || 'Sin sala';
+        const status = event.estado_evento || 'pendiente';
+        return `
+          <tr>
+            <td>
+              <div class="event-title">${escapeHTML(event.titulo)}</div>
+              <div class="event-meta">${escapeHTML(rooms)} · ${formatDate(event.fecha)} · ${formatTime(event.hora_de_inicio)} - ${formatTime(event.hora_de_termino)}</div>
+            </td>
+            <td style="text-align:right;"><span class="badge-status ${badgeClass(status)}">${escapeHTML(labelStatus(status))}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderRecentRequests(requests) {
+      const tbody = document.querySelector('#dashboard-requests-table tbody');
+      const recent = requests.slice(0, 5);
+      if (!recent.length) {
+        tbody.innerHTML = '<tr><td class="empty-state">No hay solicitudes registradas.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = recent.map(request => {
+        const rooms = (request.salas || []).map(sala => `Sala ${sala.numero_sala}`).join(', ') || 'Sin sala';
+        const status = request.estado || 'pendiente';
+        return `
+          <tr>
+            <td>
+              <div class="event-title">${escapeHTML(request.evento_titulo || 'Sin evento')}</div>
+              <div class="event-meta">${escapeHTML(rooms)} · ${formatDate(request.evento_fecha)}</div>
+            </td>
+            <td style="text-align:right;"><span class="badge-status ${badgeClass(status)}">${escapeHTML(labelStatus(status))}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderOccupancy(events) {
+      const container = document.getElementById('dashboard-occupancy');
+      const today = localDateKey(new Date());
+      const totals = { 1: 0, 2: 0, 3: 0 };
+      events
+        .filter(event => event.fecha === today && event.estado_evento !== 'cancelado')
+        .forEach(event => {
+          const duration = Math.max(0, minutesFromTime(event.hora_de_termino) - minutesFromTime(event.hora_de_inicio)) / 60;
+          (event.salas || []).forEach(sala => {
+            totals[sala.numero_sala] = (totals[sala.numero_sala] || 0) + duration;
+          });
+        });
+
+      const colors = { 1: 'var(--blue-600)', 2: 'var(--green)', 3: 'var(--gold)' };
+      container.innerHTML = [1, 2, 3].map(room => {
+        const hours = totals[room] || 0;
+        const percent = Math.min(100, Math.round((hours / 12) * 100));
+        return `
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:${colors[room]};">Sala ${room}</div>
+            <div style="font-size:2rem; font-weight:800; color:${colors[room]};">${percent}%</div>
+            <div style="font-size:0.75rem; color:var(--muted);">${formatNumber(hours)} de 12 horas ocupadas</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function describeRooms(events) {
+      if (!events.length) return 'Sin eventos programados hoy';
+      const counts = { 1: 0, 2: 0, 3: 0 };
+      events.forEach(event => (event.salas || []).forEach(sala => { counts[sala.numero_sala] = (counts[sala.numero_sala] || 0) + 1; }));
+      return [1, 2, 3].map(room => `${counts[room] || 0} en Sala ${room}`).join(', ');
+    }
+
+    function badgeClass(status) {
+      if (status === 'confirmado' || status === 'aprobada') return 'badge-approved';
+      if (status === 'rechazada') return 'badge-rejected';
+      if (status === 'cancelado' || status === 'cancelada') return 'badge-cancelled';
+      return 'badge-pending';
+    }
+
+    function labelStatus(status) {
+      const labels = { confirmado: 'Confirmado', pendiente: 'Pendiente', cancelado: 'Cancelado', aprobada: 'Aprobada', rechazada: 'Rechazada', cancelada: 'Cancelada' };
+      return labels[status] || status;
+    }
+
+    function parseDate(value) {
+      return new Date(`${value}T00:00:00`);
+    }
+
+    function localDateKey(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    function startOfWeek(date) {
+      const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const diff = (copy.getDay() + 6) % 7;
+      copy.setDate(copy.getDate() - diff);
+      return copy;
+    }
+
+    function minutesFromDate(date) {
+      return date.getHours() * 60 + date.getMinutes();
+    }
+
+    function minutesFromTime(value) {
+      const [hour, minute] = String(value || '00:00').split(':').map(Number);
+      return (hour || 0) * 60 + (minute || 0);
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Sin fecha';
+      return parseDate(value).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    }
+
+    function formatTime(value) {
+      return String(value || '').slice(0, 5);
+    }
+
+    function formatNumber(value) {
+      return Number.isInteger(value) ? value : value.toFixed(1);
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
   });
 </script>
 {% endblock %}
+

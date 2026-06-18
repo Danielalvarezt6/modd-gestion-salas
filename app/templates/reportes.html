@@ -21,7 +21,6 @@
       <a href="/solicitudes"><i data-lucide="clipboard-list"></i> Solicitudes</a>
       <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
       <a href="/reportes" class="active"><i data-lucide="bar-chart-2"></i> Reportes</a>
-      <a href="#"><i data-lucide="building-2"></i> Salas</a>
     </nav>
 
     <div class="admin-sidebar-footer">
@@ -36,14 +35,10 @@
         <p>Exporta informacion de eventos, solicitudes y uso de salas.</p>
       </div>
       <div class="admin-topbar-actions">
-        <div class="admin-search">
-          <i data-lucide="search" class="w-4 h-4"></i>
-          <input id="report-search" type="search" placeholder="Buscar...">
-        </div>
         <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <div class="admin-avatar">AD</div>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
       </div>
     </header>
 
@@ -60,7 +55,7 @@
         <div>
           <h3>Reporte Semanal</h3>
           <p>Eventos de la semana actual con detalle de requisitos y asistentes.</p>
-          <button class="admin-primary-button mt-4" data-report="Reporte semanal" type="button">
+          <button class="admin-primary-button mt-4" data-report-type="semanal" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
         </div>
@@ -73,7 +68,7 @@
         <div>
           <h3>Reporte Mensual</h3>
           <p>Historial del mes: uso de salas, solicitantes y estadisticas.</p>
-          <button class="admin-primary-button mt-4" data-report="Reporte mensual" type="button">
+          <button class="admin-primary-button mt-4" data-report-type="mensual" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
         </div>
@@ -86,7 +81,7 @@
         <div>
           <h3>Informe por Sala</h3>
           <p>Actividad detallada de una sala especifica en el periodo seleccionado.</p>
-          <button class="admin-primary-button mt-4" data-report="Informe por sala" type="button">
+          <button class="admin-primary-button mt-4" data-report-type="sala" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
         </div>
@@ -99,7 +94,7 @@
         <div>
           <h3>Reporte Personalizado</h3>
           <p>Define rango de fechas, salas y tipo de evento para exportar.</p>
-          <button class="admin-primary-button mt-4" data-report="Reporte personalizado" type="button">
+          <button class="admin-primary-button mt-4" data-report-type="personalizado" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
         </div>
@@ -145,8 +140,8 @@
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const toggle = document.getElementById('sidebar-toggle');
-    const search = document.getElementById('report-search');
     const cards = Array.from(document.querySelectorAll('.report-card'));
+    let reportData = null;
 
     toggle?.addEventListener('click', function () {
       sidebar.classList.toggle('open');
@@ -159,17 +154,12 @@
       document.body.style.overflow = '';
     });
 
-    search.addEventListener('input', function () {
-      const term = search.value.trim().toLowerCase();
-      cards.forEach(function (card) {
-        card.style.display = !term || card.dataset.search.includes(term) ? '' : 'none';
-      });
-    });
+    loadReportSummary();
 
-    document.querySelectorAll('[data-report], #export-filters').forEach(function (button) {
+    document.querySelectorAll('[data-report-type], #export-filters').forEach(function (button) {
       button.addEventListener('click', function () {
-        const label = button.dataset.report || 'Reporte con filtros';
-        showToast(label + ' preparado para generacion PDF.');
+        const type = button.dataset.reportType || 'personalizado';
+        downloadPdfReport(type);
       });
     });
 
@@ -185,6 +175,46 @@
       toast.classList.add('show');
       setTimeout(function () { toast.classList.remove('show'); }, 2800);
     }
+
+    function downloadPdfReport(type) {
+      const params = new URLSearchParams();
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const room = document.getElementById('report-room').value;
+      params.set('tipo', type);
+      if ((type === 'personalizado' || type === 'sala') && startDate) params.set('fecha_inicio', startDate);
+      if ((type === 'personalizado' || type === 'sala') && endDate) params.set('fecha_fin', endDate);
+      if ((type === 'personalizado' || type === 'sala') && room !== 'Todas las salas') params.set('sala', room.replace('Sala ', ''));
+      if (type === 'sala' && room === 'Todas las salas') {
+        showToast('Selecciona una sala para generar el informe por sala.');
+        return;
+      }
+
+      window.location.href = '/api/reportes/pdf?' + params.toString();
+      showToast('Descargando PDF...');
+    }
+
+    async function loadReportSummary() {
+      const params = new URLSearchParams();
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const room = document.getElementById('report-room').value;
+      if (startDate) params.set('fecha_inicio', startDate);
+      if (endDate) params.set('fecha_fin', endDate);
+      if (room !== 'Todas las salas') params.set('sala', room.replace('Sala ', ''));
+
+      try {
+        const response = await fetch('/api/reportes/resumen?' + params.toString());
+        if (!response.ok) throw new Error('No se pudo cargar el resumen de reportes.');
+        reportData = await response.json();
+        return reportData;
+      } catch (error) {
+        showToast(error.message);
+        reportData = null;
+        return null;
+      }
+    }
+
   });
 </script>
 {% endblock %}

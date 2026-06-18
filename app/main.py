@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 # importar routers
-from app.routers import views, api_auth, api_salas, api_eventos
+from app.routers import views, api_auth, api_salas, api_eventos, api_solicitudes, api_reportes
 
 app = FastAPI(
     title="MODD API - Gesión de Salas",
@@ -30,3 +30,5 @@ app.include_router(views.router)
 app.include_router(api_auth.router)
 app.include_router(api_salas.router)
 app.include_router(api_eventos.router)
+app.include_router(api_solicitudes.router)
+app.include_router(api_reportes.router)

@@ -27,6 +27,7 @@ class Solicitante(Base):
     apellido = Column(String, nullable=False)
     correo = Column(String, unique=True, index=True, nullable=False)
     no_de_telefono = Column(String)
+    institucion = Column(String, server_default="Universidad de Sonora")
 
     solicitudes = relationship("Solicitud", back_populates="solicitante")
 
@@ -68,6 +69,8 @@ class Evento(Base):
     hora_de_inicio = Column(Time, nullable=False)
     hora_de_termino = Column(Time, nullable=False)
     no_de_asistentes = Column(Integer)
+    tipo = Column(String, server_default="clase")
+    estado_evento = Column(String, server_default="confirmado")
 
     id_solicitud = Column(Integer, ForeignKey("solicitud.id_solicitud"))
     id_requerimientos = Column(Integer, ForeignKey("requerimientos.id_requerimientos"))

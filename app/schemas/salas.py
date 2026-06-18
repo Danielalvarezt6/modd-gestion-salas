@@ -45,6 +45,7 @@ class SolicitanteBase(BaseModel):
     apellido: str
     correo: EmailStr  # Valida automáticamente que lleve '@' y '.com'
     no_de_telefono: Optional[str] = None
+    institucion: Optional[str] = "Universidad de Sonora"
 
 
 class SolicitanteCreate(SolicitanteBase):
@@ -64,6 +65,7 @@ class SolicitanteOut(SolicitanteBase):
 class SolicitudBase(BaseModel):
     fecha_solicitud: date
     hora_de_solicitud: time
+    estado: Optional[str] = "pendiente"
     id_solicitante: Optional[int] = None
 
 
@@ -82,6 +84,47 @@ class SolicitudOut(SolicitudBase):
         from_attributes = True
 
 
+class SolicitudResumenOut(BaseModel):
+    id_solicitud: int
+    estado: Optional[str] = "pendiente"
+    fecha_solicitud: date
+    hora_de_solicitud: time
+    solicitante_nombre: str
+    solicitante_correo: str
+    institucion: Optional[str] = None
+    evento_titulo: Optional[str] = None
+    evento_fecha: Optional[date] = None
+    evento_inicio: Optional[time] = None
+    evento_fin: Optional[time] = None
+    evento_asistentes: Optional[int] = None
+    evento_tipo: Optional[str] = None
+    salas: List[SalaOut] = []
+
+
+class SolicitudEstadoUpdate(BaseModel):
+    estado: str
+
+
+class SolicitudEventoCreate(BaseModel):
+    solicitante_nombre: str
+    solicitante_apellido: str
+    solicitante_correo: EmailStr
+    solicitante_telefono: Optional[str] = None
+    institucion: Optional[str] = "Universidad de Sonora"
+    evento_titulo: str
+    evento_descripcion: Optional[str] = None
+    evento_fecha: date
+    evento_inicio: time
+    evento_fin: time
+    evento_asistentes: Optional[int] = 0
+    evento_tipo: Optional[str] = "general"
+    sala_id: int
+    acomodo: Optional[str] = None
+    equipo_de_sonido: Optional[bool] = False
+    cafeteria: Optional[bool] = False
+    videoconferencia: Optional[bool] = False
+
+
 # ==========================================
 # SCHEMAS PARA EVENTO
 # ==========================================
@@ -92,6 +135,8 @@ class EventoBase(BaseModel):
     hora_de_inicio: time
     hora_de_termino: time
     no_de_asistentes: Optional[int] = None
+    tipo: Optional[str] = "clase"
+    estado_evento: Optional[str] = "confirmado"
 
 
 class EventoCreate(EventoBase):
@@ -99,6 +144,10 @@ class EventoCreate(EventoBase):
     id_requerimientos: Optional[int] = None
     # Cuando el frontend envíe el formulario, mandará un arreglo de salas ej: [101, 102]
     salas_ids: Optional[List[int]] = []
+
+
+class EventoUpdate(EventoCreate):
+    pass
 
 
 class EventoOut(EventoBase):
@@ -113,3 +162,14 @@ class EventoOut(EventoBase):
 
     class Config:
         from_attributes = True
+
+
+class ReporteResumenOut(BaseModel):
+    total_eventos: int
+    confirmados: int
+    pendientes: int
+    cancelados: int
+    mantenimiento: int
+    total_asistentes: int
+    uso_por_sala: List[dict]
+    eventos: List[EventoOut]

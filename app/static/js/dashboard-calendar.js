@@ -39,7 +39,7 @@
       const eventosDB = await response.json();
 
       // Traducir el JSON de la base de datos al formato que espera FullCalendar
-      events = eventosDB.map((evt) => {
+      events = eventosDB.filter((evt) => evt.estado_evento !== 'cancelado').map((evt) => {
         return {
           id: String(evt.id_evento),
           title: evt.titulo,
@@ -48,12 +48,12 @@
           end: `${evt.fecha}T${evt.hora_de_termino}`,
           // Convertimos [{numero_sala: 1}] a ['sala1']
           rooms: evt.salas.map((s) => `sala${s.numero_sala}`),
-          // Campos temporales (luego los podemos ligar a otras tablas)
-          status: 'confirmado',
+          status: evt.estado_evento || 'confirmado',
           responsible: 'Usuario',
           notes: evt.descripcion || ''
         };
       });
+      warnExistingConflicts();
     } catch (error) {
       console.error("Error al cargar eventos:", error);
       showAlert('No se pudieron cargar los eventos de la base de datos.', 'error');
@@ -106,6 +106,7 @@
     });
 
     document.getElementById('event-form')?.addEventListener('submit', saveEventFromModal);
+    document.getElementById('event-delete-button')?.addEventListener('click', deleteEventFromModal);
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeEventModal();
     });
@@ -193,7 +194,6 @@
         dayColumn.appendChild(lane);
       });
 
-      dayColumn.addEventListener('click', handleEmptySlotClick);
       grid.appendChild(dayColumn);
     });
 
@@ -232,8 +232,8 @@
     card.style.setProperty('--event-color', eventColor);
     card.style.top = `${top + 3}px`;
     card.style.height = `${height}px`;
-    card.style.left = `calc(${leftPercent}% + 4px)`;
-    card.style.width = `calc(${widthPercent}% - 8px)`;
+    card.style.left = `calc(${leftPercent}% + 7px)`;
+    card.style.width = `calc(${widthPercent}% - 14px)`;
     card.innerHTML = `
       <strong class="modd-event-title">${escapeHTML(eventItem.title)}</strong>
       <span class="modd-event-meta">${getEventTime(eventItem.start)} - ${getEventTime(eventItem.end)} - ${eventItem.rooms.map((roomId) => findRoom(roomId).name).join(', ')}</span>
@@ -243,7 +243,7 @@
       <span class="modd-duration-resize-handle" title="Extender horas" aria-hidden="true"></span>
     `;
 
-    card.addEventListener('click', (event) => {
+    card.addEventListener('dblclick', (event) => {
       event.stopPropagation();
       openEventModal(eventItem);
     });
@@ -273,17 +273,26 @@
       roomCount,
       duration: timeToMinutes(getEventTime(original.end)) - timeToMinutes(getEventTime(original.start)),
       startRoomIndex: Math.max(0, visibleRooms.indexOf(visibleEventRooms[0] || original.rooms[0])),
-      fixedDayColumn: dayColumn
+      fixedDayColumn: dayColumn,
+      originX: pointerEvent.clientX,
+      originY: pointerEvent.clientY,
+      activated: false
     };
 
-    card.classList.add('dragging');
     document.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('pointerup', finishPointerInteraction, { once: true });
-    handlePointerMove(pointerEvent);
   }
 
   function handlePointerMove(pointerEvent) {
     if (!dragState) return;
+
+    if (!dragState.activated) {
+      const distance = Math.hypot(pointerEvent.clientX - dragState.originX, pointerEvent.clientY - dragState.originY);
+      const threshold = dragState.type === 'drag' ? 8 : 4;
+      if (distance < threshold) return;
+      dragState.activated = true;
+      dragState.card.classList.add('dragging');
+    }
 
     const targetColumn = dragState.type === 'resize-room' || dragState.type === 'resize-time'
       ? dragState.fixedDayColumn
@@ -335,7 +344,7 @@
     showGuide(targetColumn, proposed, conflict);
   }
 
-  function finishPointerInteraction() {
+  async function finishPointerInteraction() {
     document.removeEventListener('pointermove', handlePointerMove);
 
     if (!dragState) return;
@@ -344,11 +353,23 @@
     const proposed = dragState.proposed;
     dragState.card.classList.remove('dragging');
 
+    if (!dragState.activated) {
+      dragState = null;
+      hideGuide();
+      return;
+    }
+
     if (eventItem && proposed) {
       if (hasConflict(proposed, proposed.id)) {
         showAlert('No se puede aplicar el cambio: el evento se solapa con otro en la misma sala y horario.');
       } else {
         Object.assign(eventItem, proposed);
+        try {
+          await persistEventToApi(eventItem);
+        } catch (error) {
+          Object.assign(eventItem, dragState.original);
+          showAlert(`Error: ${error.message}`, 'error');
+        }
       }
     }
 
@@ -376,8 +397,8 @@
     activeGuide.style.display = 'block';
     activeGuide.style.top = `${((startMinutes - START_MIN) / 60) * HOUR_HEIGHT + 3}px`;
     activeGuide.style.height = `${Math.max(42, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 6)}px`;
-    activeGuide.style.left = `calc(${(firstRoomIndex / visibleRooms.length) * 100}% + 4px)`;
-    activeGuide.style.width = `calc(${(((lastRoomIndex - firstRoomIndex) + 1) / visibleRooms.length) * 100}% - 8px)`;
+    activeGuide.style.left = `calc(${(firstRoomIndex / visibleRooms.length) * 100}% + 7px)`;
+    activeGuide.style.width = `calc(${(((lastRoomIndex - firstRoomIndex) + 1) / visibleRooms.length) * 100}% - 14px)`;
     activeGuide.classList.toggle('conflict', conflict);
   }
 
@@ -393,27 +414,6 @@
     return element?.closest?.('.modd-day-column') || null;
   }
 
-  function handleEmptySlotClick(event) {
-    if (event.target.closest('.modd-event-card')) return;
-
-    const dayColumn = event.currentTarget;
-    const rect = dayColumn.getBoundingClientRect();
-    const roomWidth = rect.width / visibleRooms.length;
-    const roomIndex = clamp(Math.floor((event.clientX - rect.left) / roomWidth), 0, visibleRooms.length - 1);
-    const startMinutes = clamp(
-      START_MIN + Math.floor(((event.clientY - rect.top) / HOUR_HEIGHT) * 60 / STEP_MIN) * STEP_MIN,
-      START_MIN,
-      END_MIN - 60
-    );
-
-    openEventModal({
-      date: dayColumn.dataset.date,
-      rooms: [visibleRooms[roomIndex]],
-      startTime: formatMinutes(startMinutes),
-      endTime: formatMinutes(startMinutes + 60)
-    });
-  }
-
   function initFullCalendar() {
     const fullCalendarElement = document.getElementById('modd-fullcalendar');
     if (!fullCalendarElement || typeof FullCalendar === 'undefined') return;
@@ -423,7 +423,7 @@
       locale: 'es',
       height: 'auto',
       editable: true,
-      selectable: true,
+      selectable: false,
       nowIndicator: true,
       allDaySlot: false,
       slotMinTime: '08:00:00',
@@ -432,16 +432,10 @@
       snapDuration: '01:00:00',
       defaultTimedEventDuration: '01:00:00',
       headerToolbar: false,
-      eventClick(info) {
-        const eventItem = events.find((item) => item.id === info.event.id);
-        if (eventItem) openEventModal(eventItem);
-      },
-      dateClick(info) {
-        openEventModal({
-          date: info.dateStr.slice(0, 10),
-          rooms: ['sala1'],
-          startTime: '09:00',
-          endTime: '10:00'
+      eventDidMount(info) {
+        info.el.addEventListener('dblclick', () => {
+          const eventItem = events.find((item) => item.id === info.event.id);
+          if (eventItem) openEventModal(eventItem);
         });
       },
       eventDrop(info) {
@@ -455,7 +449,7 @@
     fullCalendar.render();
   }
 
-  function updateFromFullCalendarChange(info) {
+  async function updateFromFullCalendarChange(info) {
     const eventItem = events.find((item) => item.id === info.event.id);
     if (!eventItem) return;
 
@@ -472,8 +466,16 @@
     }
 
     Object.assign(eventItem, proposed);
-    renderWeekCalendar();
-    renderFullCalendarEvents();
+    try {
+      await persistEventToApi(eventItem);
+      renderWeekCalendar();
+      renderFullCalendarEvents();
+    } catch (error) {
+      info.revert();
+      showAlert(`Error: ${error.message}`, 'error');
+      await cargarEventosDesdeApi();
+      rerenderActiveViews();
+    }
   }
 
   function renderFullCalendarEvents() {
@@ -513,6 +515,7 @@
     document.getElementById('event-end').value = eventData.endTime || getEventTime(eventData.end) || '10:00';
     document.getElementById('event-status').value = eventData.status || 'confirmado';
     document.getElementById('event-notes').value = eventData.notes || '';
+    document.getElementById('event-delete-button')?.classList.toggle('hidden', !isExisting);
 
     const selectedRooms = eventData.rooms?.length ? eventData.rooms : ['sala1'];
     document.querySelectorAll('input[name="event-room"]').forEach((input) => {
@@ -534,7 +537,7 @@
     document.body.style.overflow = '';
   }
 
-  function saveEventFromModal(event) {
+  async function saveEventFromModal(event) {
     event.preventDefault();
 
     const id = document.getElementById('event-id').value;
@@ -565,13 +568,20 @@
       fecha: date, // "YYYY-MM-DD"
       hora_de_inicio: `${startTime}:00`, // Pydantic espera formato "HH:MM:SS"
       hora_de_termino: `${endTime}:00`,
+      tipo: 'clase',
+      estado_evento: document.getElementById('event-status').value,
       // Convertimos los IDs del HTML ['sala1', 'sala2'] a una lista de enteros [1, 2]
       salas_ids: selectedRooms.map(room => parseInt(room.replace('sala', ''))),
       no_de_asistentes: 0 // Valor por defecto
     };
 
     // Validación visual de conflictos (se mantiene tu lógica actual)
-    const tempProposed = { start: `${date}T${startTime}:00`, end: `${date}T${endTime}:00`, rooms: selectedRooms, status: 'confirmado' };
+    const tempProposed = {
+      start: `${date}T${startTime}:00`,
+      end: `${date}T${endTime}:00`,
+      rooms: selectedRooms,
+      status: document.getElementById('event-status').value
+    };
     if (hasConflict(tempProposed, id)) {
       showAlert('No se puede guardar: el evento se solapa con otro en la misma sala y horario.');
       return;
@@ -579,25 +589,19 @@
 
     // 2. Enviamos los datos al backend (POST)
     try {
-      // Si existe un ID, idealmente haríamos un PUT. Por ahora, si es nuevo, hacemos POST.
-      if (!id) {
-        const response = await fetch('/api/eventos/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cargaUtilAPI)
-        });
+      const response = await fetch(id ? `/api/eventos/${id}` : '/api/eventos/', {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cargaUtilAPI)
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Error al guardar el evento');
-        }
-      } else {
-        // TODO en el futuro: Lógica para editar (PUT) cuando hagas clic en un evento existente
-        console.log("Edición de eventos en base de datos pendiente de implementar en la API");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al guardar el evento');
       }
 
       // 3. Si se guardó bien, volvemos a descargar todos los eventos para que se pinten correctamente
-      await cargarEventosDesdeAPI();
+      await cargarEventosDesdeApi();
 
       closeEventModal();
       showAlert('Evento guardado exitosamente en la base de datos.', 'success');
@@ -625,6 +629,74 @@
       const eventEnd = new Date(eventItem.end).getTime();
       return proposedStart < eventEnd && proposedEnd > eventStart;
     });
+  }
+
+  async function deleteEventFromModal() {
+    const id = document.getElementById('event-id').value;
+    if (!id) return;
+
+    const confirmed = window.confirm('¿Eliminar este evento definitivamente?');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/eventos/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'No se pudo eliminar el evento.');
+      }
+
+      await cargarEventosDesdeApi();
+      closeEventModal();
+      showAlert('Evento eliminado correctamente.', 'success');
+      rerenderActiveViews();
+    } catch (error) {
+      showAlert(`Error: ${error.message}`, 'error');
+    }
+  }
+
+  function warnExistingConflicts() {
+    const conflict = events.some((eventItem, index) => {
+      return events.slice(index + 1).some((otherEvent) => {
+        if (getEventDate(eventItem) !== getEventDate(otherEvent)) return false;
+        if (!eventItem.rooms.some((roomId) => otherEvent.rooms.includes(roomId))) return false;
+        const eventStart = new Date(eventItem.start).getTime();
+        const eventEnd = new Date(eventItem.end).getTime();
+        const otherStart = new Date(otherEvent.start).getTime();
+        const otherEnd = new Date(otherEvent.end).getTime();
+        return eventStart < otherEnd && eventEnd > otherStart;
+      });
+    });
+
+    if (conflict) {
+      showAlert('Hay eventos ya guardados que se solapan. Mueve o edita uno de ellos para liberar el horario.');
+    }
+  }
+
+  async function persistEventToApi(eventItem) {
+    const response = await fetch(`/api/eventos/${eventItem.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventToApiPayload(eventItem))
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'No se pudo guardar el cambio.');
+    }
+  }
+
+  function eventToApiPayload(eventItem) {
+    return {
+      titulo: eventItem.title,
+      descripcion: eventItem.notes || '',
+      fecha: getEventDate(eventItem),
+      hora_de_inicio: `${getEventTime(eventItem.start)}:00`,
+      hora_de_termino: `${getEventTime(eventItem.end)}:00`,
+      no_de_asistentes: eventItem.no_de_asistentes || 0,
+      tipo: eventItem.tipo || 'clase',
+      estado_evento: eventItem.status || 'confirmado',
+      salas_ids: eventItem.rooms.map((room) => parseInt(room.replace('sala', ''), 10))
+    };
   }
 
   function filteredEvents() {

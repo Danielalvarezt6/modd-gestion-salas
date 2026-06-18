@@ -21,7 +21,6 @@
       <a href="/solicitudes" class="active"><i data-lucide="clipboard-list"></i> Solicitudes</a>
       <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
       <a href="/reportes"><i data-lucide="bar-chart-2"></i> Reportes</a>
-      <a href="#"><i data-lucide="building-2"></i> Salas</a>
     </nav>
 
     <div class="admin-sidebar-footer">
@@ -36,32 +35,31 @@
         <p>Revision, aprobacion y seguimiento de solicitudes de sala.</p>
       </div>
       <div class="admin-topbar-actions">
-        <div class="admin-search">
-          <i data-lucide="search" class="w-4 h-4"></i>
-          <input id="top-search" type="search" placeholder="Buscar...">
-        </div>
+        <button class="admin-primary-button" id="new-request-btn" type="button">
+          <i data-lucide="file-plus" class="w-5 h-5"></i> Nueva solicitud
+        </button>
         <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <div class="admin-avatar">AD</div>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
       </div>
     </header>
 
     <section class="admin-stat-grid" aria-label="Resumen de solicitudes">
       <button class="admin-stat-card is-selected" data-status-card="todas" type="button">
-        <div class="admin-stat-value">{{ stat_total }}</div>
+        <div class="admin-stat-value">0</div>
         <div class="admin-stat-label">Todas</div>
       </button>
       <button class="admin-stat-card" data-status-card="pendiente" type="button" style="--stat-color:#8a6200">
-        <div class="admin-stat-value">{{ stat_pendientes }}</div>
+        <div class="admin-stat-value">0</div>
         <div class="admin-stat-label">Pendiente</div>
       </button>
       <button class="admin-stat-card" data-status-card="aprobada" type="button" style="--stat-color:#176b2b">
-        <div class="admin-stat-value">{{ stat_aprobadas }}</div>
+        <div class="admin-stat-value">0</div>
         <div class="admin-stat-label">Aprobada</div>
       </button>
       <button class="admin-stat-card" data-status-card="rechazada" type="button" style="--stat-color:#9f1f1a">
-        <div class="admin-stat-value">{{ stat_rechazadas }}</div>
+        <div class="admin-stat-value">0</div>
         <div class="admin-stat-label">Rechazada</div>
       </button>
     </section>
@@ -76,6 +74,7 @@
         <option value="pendiente">Pendientes</option>
         <option value="aprobada">Aprobadas</option>
         <option value="rechazada">Rechazadas</option>
+        <option value="cancelada">Canceladas</option>
       </select>
     </section>
 
@@ -95,64 +94,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for sol in solicitudes %}
-            <!-- 1. Agregamos los data-attributes para que el JS pueda filtrar -->
-            <tr data-status="{{ sol.estado }}" data-search="{{ sol.solicitante.nombre | lower }} {{ sol.solicitante.apellido | lower }} {{ sol.estado }}">
-
-              <!-- ID -->
-              <td>{{ sol.id_solicitud }}</td>
-
-              <!-- Solicitante -->
-              <td>
-                {% if sol.solicitante %}
-                  {{ sol.solicitante.nombre }} {{ sol.solicitante.apellido }}
-                {% else %}
-                  Sin asignante
-                {% endif %}
-              </td>
-
-              <!-- Evento (Asumiendo que una solicitud tiene al menos un evento) -->
-              <td>
-                {% if sol.eventos %}
-                  {{ sol.eventos[0].titulo }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-
-              <!-- Sala -->
-              <td>
-                {% if sol.eventos and sol.eventos[0].salas %}
-                  Sala {{ sol.eventos[0].salas[0].numero_sala }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-
-              <!-- Fecha / Hora -->
-              <td>{{ sol.fecha_solicitud }} / {{ sol.hora_de_solicitud }}</td>
-
-              <!-- 2. Mostramos el Estado con su clase (capitalize hace la primera letra mayúscula) -->
-              <td>
-                <span class="status-pill {{ sol.estado }}">{{ sol.estado | capitalize }}</span>
-              </td>
-
-              <!-- 3. Agregamos los data-action a los botones -->
-              <td>
-                <div class="action-buttons">
-                  <button class="btn-icon view" title="Ver detalles" data-action="view"><i class="fas fa-eye"></i></button>
-                  <button class="btn-icon approve" title="Aprobar" data-action="approve"><i class="fas fa-check"></i></button>
-                  <button class="btn-icon reject" title="Rechazar" data-action="reject"><i class="fas fa-times"></i></button>
-                </div>
-              </td>
-            </tr>
-
-            {% else %}
-            <tr>
-              <!-- 4. Ajustamos el colspan de 5 a 8 porque la tabla tiene 8 columnas -->
-              <td colspan="8" style="text-align: center;">No hay solicitudes registradas en la base de datos.</td>
-            </tr>
-            {% endfor %}
+            <tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>
           </tbody>
         </table>
       </div>
@@ -161,6 +103,125 @@
 </div>
 
 <div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+
+<div id="request-detail-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-request-modal-close></div>
+  <div class="modd-event-modal" aria-label="Detalle de solicitud">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Solicitud</p>
+        <h3 id="request-detail-title">Detalle de solicitud</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-request-modal-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="request-detail-grid" id="request-detail-content"></div>
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-secondary-action" data-request-modal-close>Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="request-create-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-request-create-close></div>
+  <form class="modd-event-modal" id="request-create-form" aria-label="Nueva solicitud">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Nueva solicitud</p>
+        <h3>Registrar solicitud de sala</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-request-create-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="modd-form-grid">
+      <label>
+        Nombre
+        <input name="solicitante_nombre" type="text" required placeholder="Ana">
+      </label>
+      <label>
+        Apellido
+        <input name="solicitante_apellido" type="text" required placeholder="Torres">
+      </label>
+      <label>
+        Correo
+        <input name="solicitante_correo" type="email" required placeholder="correo@unison.mx">
+      </label>
+      <label>
+        Telefono
+        <input name="solicitante_telefono" type="tel" placeholder="662 000 0000">
+      </label>
+      <label class="modd-form-span">
+        Institucion
+        <input name="institucion" type="text" value="Universidad de Sonora">
+      </label>
+      <label class="modd-form-span">
+        Evento
+        <input name="evento_titulo" type="text" required placeholder="Seminario de investigacion">
+      </label>
+      <label class="modd-form-span">
+        Descripcion
+        <textarea name="evento_descripcion" rows="3" placeholder="Detalles breves del evento"></textarea>
+      </label>
+      <label>
+        Fecha
+        <input name="evento_fecha" type="date" required>
+      </label>
+      <label>
+        Inicio
+        <select name="evento_inicio" required></select>
+      </label>
+      <label>
+        Fin
+        <select name="evento_fin" required></select>
+      </label>
+      <label>
+        Sala
+        <select name="sala_id" required>
+          <option value="1">Sala 1</option>
+          <option value="2">Sala 2</option>
+          <option value="3">Sala 3</option>
+        </select>
+      </label>
+      <label>
+        Asistentes
+        <input name="evento_asistentes" type="number" min="0" value="0">
+      </label>
+      <label>
+        Tipo
+        <select name="evento_tipo">
+          <option value="clase">Clase</option>
+          <option value="seminario">Seminario</option>
+          <option value="reunion">Reunion</option>
+          <option value="conferencia">Conferencia</option>
+          <option value="taller">Taller</option>
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="general">General</option>
+        </select>
+      </label>
+      <label class="modd-form-span">
+        Acomodo
+        <input name="acomodo" type="text" placeholder="Teatro, aula, herradura...">
+      </label>
+      <label class="modd-checkbox-label">
+        <input name="equipo_de_sonido" type="checkbox"> Equipo de sonido
+      </label>
+      <label class="modd-checkbox-label">
+        <input name="cafeteria" type="checkbox"> Cafeteria
+      </label>
+      <label class="modd-checkbox-label">
+        <input name="videoconferencia" type="checkbox"> Videoconferencia
+      </label>
+    </div>
+
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-secondary-action" data-request-create-close>Cancelar</button>
+      <button type="submit" class="modd-primary-action">Guardar solicitud</button>
+    </div>
+  </form>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -172,9 +233,14 @@
     const overlay = document.getElementById('sidebar-overlay');
     const toggle = document.getElementById('sidebar-toggle');
     const search = document.getElementById('request-search');
-    const topSearch = document.getElementById('top-search');
     const statusSelect = document.getElementById('request-status');
-    const rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
+    const tableBody = document.querySelector('#requests-table tbody');
+    const detailModal = document.getElementById('request-detail-modal');
+    const detailContent = document.getElementById('request-detail-content');
+    const createModal = document.getElementById('request-create-modal');
+    const createForm = document.getElementById('request-create-form');
+    const newRequestButton = document.getElementById('new-request-btn');
+    let rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
     const cards = Array.from(document.querySelectorAll('[data-status-card]'));
     let activeStatus = 'todas';
 
@@ -191,8 +257,11 @@
     });
     overlay?.addEventListener('click', closeSidebar);
 
+    loadRequestsFromApi();
+    fillHourSelects();
+
     function applyFilters() {
-      const term = (search.value || topSearch.value || '').trim().toLowerCase();
+      const term = (search.value || '').trim().toLowerCase();
       rows.forEach(function (row) {
         const statusMatch = activeStatus === 'todas' || row.dataset.status === activeStatus;
         const searchMatch = !term || row.dataset.search.includes(term);
@@ -215,16 +284,20 @@
       applyFilters();
     });
     search.addEventListener('input', applyFilters);
-    topSearch.addEventListener('input', function () {
-      search.value = topSearch.value;
-      applyFilters();
+    bindRequestActions();
+
+    document.querySelectorAll('[data-request-modal-close]').forEach(function (item) {
+      item.addEventListener('click', closeRequestDetail);
     });
 
-    document.querySelectorAll('[data-action]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        showToast(button.dataset.action === 'approve' ? 'Solicitud aprobada visualmente.' : 'Accion preparada para integracion.');
-      });
+    document.querySelectorAll('[data-request-create-close]').forEach(function (item) {
+      item.addEventListener('click', closeCreateRequest);
     });
+    newRequestButton?.addEventListener('click', openCreateRequest);
+    createForm?.addEventListener('submit', submitCreateRequest);
+    if (new URLSearchParams(window.location.search).get('new') === '1') {
+      openCreateRequest();
+    }
 
     document.getElementById('logout-link')?.addEventListener('click', function (event) {
       event.preventDefault();
@@ -238,6 +311,220 @@
       toast.classList.add('show');
       setTimeout(function () { toast.classList.remove('show'); }, 2800);
     }
+
+    function fillHourSelects() {
+      ['evento_inicio', 'evento_fin'].forEach(function (name) {
+        const select = createForm?.elements[name];
+        if (!select) return;
+        select.innerHTML = '';
+        for (let hour = 8; hour <= 20; hour += 1) {
+          const value = `${String(hour).padStart(2, '0')}:00`;
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        }
+      });
+      if (createForm?.elements.evento_inicio) createForm.elements.evento_inicio.value = '08:00';
+      if (createForm?.elements.evento_fin) createForm.elements.evento_fin.value = '09:00';
+    }
+
+    function openCreateRequest() {
+      createForm?.reset();
+      fillHourSelects();
+      if (createForm?.elements.evento_fecha) {
+        createForm.elements.evento_fecha.value = new Date().toISOString().slice(0, 10);
+      }
+      if (createForm?.elements.institucion) {
+        createForm.elements.institucion.value = 'Universidad de Sonora';
+      }
+      createModal.classList.remove('hidden');
+      createModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateRequest() {
+      createModal.classList.add('hidden');
+      createModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function submitCreateRequest(event) {
+      event.preventDefault();
+      const formData = new FormData(createForm);
+      const payload = {
+        solicitante_nombre: formData.get('solicitante_nombre'),
+        solicitante_apellido: formData.get('solicitante_apellido'),
+        solicitante_correo: formData.get('solicitante_correo'),
+        solicitante_telefono: formData.get('solicitante_telefono') || null,
+        institucion: formData.get('institucion') || 'Universidad de Sonora',
+        evento_titulo: formData.get('evento_titulo'),
+        evento_descripcion: formData.get('evento_descripcion') || null,
+        evento_fecha: formData.get('evento_fecha'),
+        evento_inicio: `${formData.get('evento_inicio')}:00`,
+        evento_fin: `${formData.get('evento_fin')}:00`,
+        evento_asistentes: Number(formData.get('evento_asistentes') || 0),
+        evento_tipo: formData.get('evento_tipo') || 'general',
+        sala_id: Number(formData.get('sala_id')),
+        acomodo: formData.get('acomodo') || null,
+        equipo_de_sonido: Boolean(formData.get('equipo_de_sonido')),
+        cafeteria: Boolean(formData.get('cafeteria')),
+        videoconferencia: Boolean(formData.get('videoconferencia'))
+      };
+
+      try {
+        const response = await fetch('/api/solicitudes/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(function () { return {}; });
+          throw new Error(error.detail || 'No se pudo crear la solicitud.');
+        }
+        closeCreateRequest();
+        await loadRequestsFromApi();
+        showToast('Solicitud creada correctamente.');
+        if (window.location.search.includes('new=1')) {
+          window.history.replaceState({}, '', '/solicitudes');
+        }
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function loadRequestsFromApi() {
+      tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
+      rows = [];
+      try {
+        const response = await fetch('/api/solicitudes/');
+        if (!response.ok) throw new Error('No se pudieron cargar solicitudes.');
+        const requests = await response.json();
+        if (!requests.length) {
+          tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
+          rows = [];
+          updateStats();
+          return;
+        }
+
+        tableBody.innerHTML = requests.map(function (item) {
+          const estado = item.estado || 'pendiente';
+          const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
+          const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
+          const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
+          const searchText = [item.solicitante_nombre, item.solicitante_correo, item.institucion, item.evento_titulo, salas].join(' ').toLowerCase();
+          const action = estado === 'pendiente'
+            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button>'
+            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button>';
+
+          return `
+            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}">
+              <td class="admin-muted">sol${item.id_solicitud}</td>
+              <td><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
+              <td>${escapeHTML(item.institucion || 'Sin institucion')}</td>
+              <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes · ${escapeHTML(item.evento_tipo || 'general')}</div></td>
+              <td>${escapeHTML(salas)}</td>
+              <td><div>${escapeHTML(fecha)}</div><div class="admin-muted">${escapeHTML(horario)}</div></td>
+              <td><span class="status-pill ${estado}">${escapeHTML(capitalize(estado))}</span></td>
+              <td><div class="admin-action-row">${action}</div></td>
+            </tr>
+          `;
+        }).join('');
+
+        rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
+        bindRequestActions();
+        updateStats();
+        applyFilters();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function bindRequestActions() {
+      document.querySelectorAll('[data-action]').forEach(function (button) {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+        button.addEventListener('click', async function () {
+          const row = button.closest('tr');
+          if (button.dataset.action === 'view' || button.dataset.action === 'edit') {
+            openRequestDetail(row);
+            return;
+          }
+          const nextStatus = button.dataset.action === 'approve' ? 'aprobada' : 'rechazada';
+          if (!row.dataset.id) {
+            row.dataset.status = nextStatus;
+            row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
+            row.querySelector('.status-pill').textContent = capitalize(nextStatus);
+            updateStats();
+            applyFilters();
+            showToast('Solicitud actualizada visualmente.');
+            return;
+          }
+          try {
+            const response = await fetch(`/api/solicitudes/${row.dataset.id}/estado`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ estado: nextStatus })
+            });
+            if (!response.ok) throw new Error('No se pudo actualizar la solicitud.');
+            row.dataset.status = nextStatus;
+            row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
+            row.querySelector('.status-pill').textContent = capitalize(nextStatus);
+            row.querySelector('.admin-action-row').innerHTML = '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button>';
+            bindRequestActions();
+            updateStats();
+            applyFilters();
+            showToast('Solicitud actualizada correctamente.');
+          } catch (error) {
+            showToast(error.message);
+          }
+        });
+      });
+    }
+
+    function updateStats() {
+      const counts = { todas: rows.length, pendiente: 0, aprobada: 0, rechazada: 0, cancelada: 0 };
+      rows.forEach(function (row) { counts[row.dataset.status] = (counts[row.dataset.status] || 0) + 1; });
+      cards.forEach(function (card) {
+        card.querySelector('.admin-stat-value').textContent = counts[card.dataset.statusCard] || 0;
+      });
+    }
+
+    function openRequestDetail(row) {
+      const cells = Array.from(row.children).map(function (cell) { return cell.innerText.trim(); });
+      document.getElementById('request-detail-title').textContent = `Solicitud ${cells[0] || ''}`;
+      detailContent.innerHTML = `
+        <div><span>ID</span><strong>${escapeHTML(cells[0] || '')}</strong></div>
+        <div><span>Solicitante</span><strong>${escapeHTML(cells[1] || '')}</strong></div>
+        <div><span>Institucion</span><strong>${escapeHTML(cells[2] || '')}</strong></div>
+        <div><span>Evento</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
+        <div><span>Sala</span><strong>${escapeHTML(cells[4] || '')}</strong></div>
+        <div><span>Fecha / Hora</span><strong>${escapeHTML(cells[5] || '')}</strong></div>
+        <div><span>Estado</span><strong>${escapeHTML(cells[6] || '')}</strong></div>
+      `;
+      detailModal.classList.remove('hidden');
+      detailModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeRequestDetail() {
+      detailModal.classList.add('hidden');
+      detailModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function capitalize(value) {
+      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+    }
+
+    function escapeHTML(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHTML(value).replaceAll('`', '&#096;');
+    }
   });
 </script>
 {% endblock %}
+
