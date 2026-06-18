@@ -172,14 +172,21 @@
         Fin
         <select name="evento_fin" required></select>
       </label>
-      <label>
-        Sala
-        <select name="sala_id" required>
-          <option value="1">Sala 1</option>
-          <option value="2">Sala 2</option>
-          <option value="3">Sala 3</option>
-        </select>
-      </label>
+      <fieldset class="request-check-grid">
+        <legend>Salas</legend>
+        <label class="modd-checkbox-card">
+          <input name="salas_ids" type="checkbox" value="1" checked>
+          <span>Sala 1</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="salas_ids" type="checkbox" value="2">
+          <span>Sala 2</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="salas_ids" type="checkbox" value="3">
+          <span>Sala 3</span>
+        </label>
+      </fieldset>
       <label>
         Asistentes
         <input name="evento_asistentes" type="number" min="0" value="0">
@@ -349,7 +356,10 @@
       createForm.elements.evento_fecha.value = row.dataset.eventDate || '';
       createForm.elements.evento_inicio.value = (row.dataset.start || '08:00:00').slice(0, 5);
       createForm.elements.evento_fin.value = (row.dataset.end || '09:00:00').slice(0, 5);
-      createForm.elements.sala_id.value = row.dataset.roomId || '1';
+      const selectedRooms = (row.dataset.roomIds || '1').split(',').filter(Boolean);
+      createForm.querySelectorAll('input[name="salas_ids"]').forEach(function (input) {
+        input.checked = selectedRooms.includes(input.value);
+      });
       createForm.elements.evento_asistentes.value = row.dataset.attendees || 0;
       createForm.elements.acomodo.value = row.dataset.layout || '';
       createForm.elements.equipo_de_sonido.checked = row.dataset.audio === 'true';
@@ -371,6 +381,19 @@
     async function submitCreateRequest(event) {
       event.preventDefault();
       const formData = new FormData(createForm);
+      const selectedRooms = Array.from(createForm.querySelectorAll('input[name="salas_ids"]:checked')).map(function (input) {
+        return Number(input.value);
+      });
+      const attendees = Number(formData.get('evento_asistentes') || 0);
+      if (!selectedRooms.length) {
+        showToast('Selecciona al menos una sala.');
+        return;
+      }
+      if (attendees > selectedRooms.length * 40) {
+        const neededRooms = Math.ceil(attendees / 40);
+        showToast(`El cupo maximo es de 40 personas por sala. Para ${attendees} asistentes selecciona al menos ${neededRooms} salas.`);
+        return;
+      }
       const payload = {
         solicitante_nombre: formData.get('solicitante_nombre'),
         solicitante_apellido: formData.get('solicitante_apellido'),
@@ -381,8 +404,8 @@
         evento_fecha: formData.get('evento_fecha'),
         evento_inicio: `${formData.get('evento_inicio')}:00`,
         evento_fin: `${formData.get('evento_fin')}:00`,
-        evento_asistentes: Number(formData.get('evento_asistentes') || 0),
-        sala_id: Number(formData.get('sala_id')),
+        evento_asistentes: attendees,
+        salas_ids: selectedRooms,
         acomodo: formData.get('acomodo') || null,
         equipo_de_sonido: Boolean(formData.get('equipo_de_sonido')),
         cafeteria: Boolean(formData.get('cafeteria')),
@@ -428,7 +451,7 @@
         tableBody.innerHTML = requests.map(function (item) {
           const estado = item.estado || 'pendiente';
           const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
-          const salaId = item.salas[0] ? item.salas[0].numero_sala : 1;
+          const salaIds = item.salas.map(function (sala) { return sala.numero_sala; });
           const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
           const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
           const requerimientos = formatRequirements(item);
@@ -439,15 +462,15 @@
             : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>';
 
           return `
-            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-id="${salaId}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}">
-              <td class="admin-muted">${item.id_solicitud}</td>
-              <td><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
-              <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
-              <td>${escapeHTML(requerimientos)}</td>
-              <td>${escapeHTML(salas)}</td>
-              <td><div>${escapeHTML(fecha)}</div><div class="admin-muted">${escapeHTML(horario)}</div></td>
-              <td><span class="status-pill ${estado}">${escapeHTML(capitalize(estado))}</span></td>
-              <td><div class="admin-action-row">${action}</div></td>
+            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-ids="${escapeAttr(salaIds.join(','))}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}">
+              <td data-label="ID" class="admin-muted">${item.id_solicitud}</td>
+              <td data-label="Solicitante"><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
+              <td data-label="Evento"><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
+              <td data-label="Requerimientos">${escapeHTML(requerimientos)}</td>
+              <td data-label="Sala">${escapeHTML(salas)}</td>
+              <td data-label="Fecha / Hora"><div>${escapeHTML(fecha)}</div><div class="admin-muted">${escapeHTML(horario)}</div></td>
+              <td data-label="Estado"><span class="status-pill ${estado}">${escapeHTML(capitalize(estado))}</span></td>
+              <td data-label="Acciones"><div class="admin-action-row">${action}</div></td>
             </tr>
           `;
         }).join('');

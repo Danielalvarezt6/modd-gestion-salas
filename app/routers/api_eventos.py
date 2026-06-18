@@ -8,6 +8,7 @@ from app.models.salas import Evento, Sala, Solicitud
 from app.schemas.salas import EventoOut, EventoCreate, EventoUpdate
 
 router = APIRouter(prefix="/api/eventos", tags=["Eventos"])
+CAPACIDAD_MAXIMA_POR_SALA = 40
 
 
 def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_ignorado: int | None = None) -> List[Sala]:
@@ -34,6 +35,17 @@ def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_
             detail="Una o más salas especificadas no existen.",
         )
 
+    asistentes = evento.no_de_asistentes or 0
+    capacidad_total = CAPACIDAD_MAXIMA_POR_SALA * len(salas_ids)
+    if asistentes > capacidad_total:
+        salas_necesarias = (asistentes + CAPACIDAD_MAXIMA_POR_SALA - 1) // CAPACIDAD_MAXIMA_POR_SALA
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"El cupo maximo es de {CAPACIDAD_MAXIMA_POR_SALA} personas por sala. "
+                f"Para {asistentes} asistentes selecciona al menos {salas_necesarias} salas."
+            ),
+        )
     eventos_mismo_dia = db.execute(
         select(Evento)
         .outerjoin(Solicitud)

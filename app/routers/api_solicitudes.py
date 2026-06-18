@@ -10,6 +10,7 @@ from app.models.salas import Evento, Requerimientos, Sala, Solicitante, Solicitu
 from app.schemas.salas import SolicitudEstadoUpdate, SolicitudEventoCreate, SolicitudResumenOut
 
 router = APIRouter(prefix="/api/solicitudes", tags=["Solicitudes"])
+CAPACIDAD_MAXIMA_POR_SALA = 40
 
 
 def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
@@ -39,6 +40,11 @@ def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
     )
 
 
+def _salas_payload(payload: SolicitudEventoCreate) -> list[int]:
+    salas_ids = payload.salas_ids or ([payload.sala_id] if payload.sala_id is not None else [])
+    return sorted({int(sala_id) for sala_id in salas_ids if sala_id is not None})
+
+
 def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_evento_ignorado: int | None = None):
     if payload.evento_inicio >= payload.evento_fin:
         raise HTTPException(
@@ -46,11 +52,30 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
             detail="La hora de fin debe ser posterior a la hora de inicio.",
         )
 
-    sala = db.get(Sala, payload.sala_id)
-    if not sala:
+    salas_ids = _salas_payload(payload)
+    if not salas_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Selecciona al menos una sala.",
+        )
+
+    salas = db.execute(select(Sala).where(Sala.numero_sala.in_(salas_ids))).scalars().all()
+    if len(salas) != len(salas_ids):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="La sala seleccionada no existe.",
+            detail="Una o mas salas seleccionadas no existen.",
+        )
+
+    asistentes = payload.evento_asistentes or 0
+    capacidad_total = CAPACIDAD_MAXIMA_POR_SALA * len(salas_ids)
+    if asistentes > capacidad_total:
+        salas_necesarias = (asistentes + CAPACIDAD_MAXIMA_POR_SALA - 1) // CAPACIDAD_MAXIMA_POR_SALA
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"El cupo maximo es de {CAPACIDAD_MAXIMA_POR_SALA} personas por sala. "
+                f"Para {asistentes} asistentes selecciona al menos {salas_necesarias} salas."
+            ),
         )
 
     eventos_mismo_dia = db.execute(
@@ -67,7 +92,7 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
         if payload.evento_inicio < evento.hora_de_termino and payload.evento_fin > evento.hora_de_inicio:
             for item in evento.salas:
                 salas_ocupadas.add(item.numero_sala)
-                if item.numero_sala == payload.sala_id:
+                if item.numero_sala in salas_ids:
                     hay_conflicto = True
 
     if hay_conflicto:
@@ -87,7 +112,7 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
             detail=f"No se puede crear la solicitud: el evento se solapa con otro en la misma sala y horario.{sugerencia}",
         )
 
-    return sala
+    return salas
 
 
 def _load_solicitud(db: Session, id_solicitud: int) -> Solicitud | None:
@@ -137,7 +162,7 @@ def _delete_solicitud_tree(db: Session, solicitud: Solicitud):
 
 @router.post("/", response_model=SolicitudResumenOut, status_code=status.HTTP_201_CREATED)
 async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(get_db)):
-    sala = _validar_solape_evento(payload, db)
+    salas = _validar_solape_evento(payload, db)
     solicitante = db.query(Solicitante).filter(Solicitante.correo == payload.solicitante_correo).first()
     if not solicitante:
         solicitante = Solicitante(correo=payload.solicitante_correo)
@@ -168,7 +193,7 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
         no_de_asistentes=payload.evento_asistentes,
         solicitud=solicitud,
         requerimientos=requerimientos,
-        salas=[sala],
+        salas=salas,
     )
     db.add(evento)
     db.flush()
@@ -201,7 +226,7 @@ async def actualizar_solicitud(
       )
 
     evento = solicitud.eventos[0] if solicitud.eventos else None
-    sala = _validar_solape_evento(payload, db, id_evento_ignorado=evento.id_evento if evento else None)
+    salas = _validar_solape_evento(payload, db, id_evento_ignorado=evento.id_evento if evento else None)
 
     solicitante = solicitud.solicitante or Solicitante(correo=payload.solicitante_correo)
     solicitante.nombre = payload.solicitante_nombre
@@ -228,7 +253,7 @@ async def actualizar_solicitud(
     evento.hora_de_inicio = payload.evento_inicio
     evento.hora_de_termino = payload.evento_fin
     evento.no_de_asistentes = payload.evento_asistentes
-    evento.salas = [sala]
+    evento.salas = salas
 
     db.commit()
     solicitud = _load_solicitud(db, id_solicitud)
