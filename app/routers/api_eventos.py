@@ -122,8 +122,10 @@ async def actualizar_evento(id_evento: int, evento: EventoUpdate, db: Session = 
     evento_db.hora_de_inicio = evento.hora_de_inicio
     evento_db.hora_de_termino = evento.hora_de_termino
     evento_db.no_de_asistentes = evento.no_de_asistentes
-    evento_db.id_solicitud = evento.id_solicitud
-    evento_db.id_requerimientos = evento.id_requerimientos
+    if evento.id_solicitud is not None:
+        evento_db.id_solicitud = evento.id_solicitud
+    if evento.id_requerimientos is not None:
+        evento_db.id_requerimientos = evento.id_requerimientos
 
     if evento.salas_ids is not None:
         stmt = select(Sala).where(Sala.numero_sala.in_(evento.salas_ids))
