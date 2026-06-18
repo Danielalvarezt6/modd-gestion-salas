@@ -254,10 +254,8 @@
       </a>
     </nav>
 
-    <hr class="sidebar-divider">
-
     <div class="sidebar-footer">
-      <a href="/login" id="logout-link">
+      <a href="/api/auth/logout" id="logout-link">
         <i data-lucide="log-out"></i> Cerrar sesion
       </a>
     </div>
@@ -324,12 +322,6 @@
           <span><i class="legend-dot sala2"></i>Sala 2</span>
           <span><i class="legend-dot sala3"></i>Sala 3</span>
         </div>
-        <div class="modd-legend-group">
-          <span><i class="legend-dot confirmed"></i>Confirmado</span>
-          <span><i class="legend-dot pending"></i>Pendiente</span>
-          <span><i class="legend-dot cancelled"></i>Cancelado</span>
-          <span><i class="legend-dot conflict"></i>Conflicto</span>
-        </div>
       </div>
 
       <div id="calendar-alert" class="modd-calendar-alert" role="status" aria-live="polite"></div>
@@ -358,27 +350,33 @@
       </button>
     </div>
 
+    <div id="event-modal-alert" class="modd-modal-alert" role="alert" aria-live="assertive"></div>
+
     <input type="hidden" id="event-id">
     <div class="modd-form-grid">
       <label>
+        <span>Nombre</span>
+        <input id="request-first-name" type="text" required placeholder="Nombre del solicitante">
+      </label>
+      <label>
+        <span>Apellido</span>
+        <input id="request-last-name" type="text" required placeholder="Apellido del solicitante">
+      </label>
+      <label>
+        <span>Correo</span>
+        <input id="request-email" type="email" required placeholder="correo@unison.mx">
+      </label>
+      <label>
+        <span>Telefono</span>
+        <input id="request-phone" type="tel" placeholder="662 000 0000">
+      </label>
+      <label class="modd-form-span">
         <span>Nombre del evento</span>
         <input id="event-title" type="text" required placeholder="Ej. Taller de innovacion">
       </label>
       <label>
-        <span>Responsable</span>
-        <input id="event-responsible" type="text" required placeholder="Nombre del responsable">
-      </label>
-      <label>
         <span>Fecha</span>
         <input id="event-date" type="date" required>
-      </label>
-      <label>
-        <span>Estado</span>
-        <select id="event-status">
-          <option value="confirmado">Confirmado</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
       </label>
       <label>
         <span>Inicio</span>
@@ -388,27 +386,43 @@
         <span>Fin</span>
         <input id="event-end" type="time" min="08:00" max="18:00" step="3600" required>
       </label>
+      <label>
+        <span>Sala</span>
+        <select id="event-room-single" required>
+          <option value="1">Sala 1</option>
+          <option value="2">Sala 2</option>
+          <option value="3">Sala 3</option>
+        </select>
+      </label>
+      <label>
+        <span>Asistentes</span>
+        <input id="event-attendees" type="number" min="0" value="0">
+      </label>
+      <label class="modd-form-span">
+        <span>Acomodo</span>
+        <input id="event-layout" type="text" placeholder="Teatro, aula, herradura...">
+      </label>
     </div>
 
-    <fieldset class="modd-room-select">
-      <legend>Salas</legend>
-      <label class="modd-room-chip sala1">
-        <input type="checkbox" name="event-room" value="sala1">
-        <span>Sala 1</span>
+    <fieldset class="request-check-grid mt-4">
+      <legend>Requerimientos</legend>
+      <label class="modd-checkbox-card">
+        <input id="event-audio" type="checkbox">
+        <span><i data-lucide="volume-2" class="w-4 h-4"></i> Equipo de sonido</span>
       </label>
-      <label class="modd-room-chip sala2">
-        <input type="checkbox" name="event-room" value="sala2">
-        <span>Sala 2</span>
+      <label class="modd-checkbox-card">
+        <input id="event-catering" type="checkbox">
+        <span><i data-lucide="coffee" class="w-4 h-4"></i> Cafeteria</span>
       </label>
-      <label class="modd-room-chip sala3">
-        <input type="checkbox" name="event-room" value="sala3">
-        <span>Sala 3</span>
+      <label class="modd-checkbox-card">
+        <input id="event-video" type="checkbox">
+        <span><i data-lucide="video" class="w-4 h-4"></i> Videoconferencia</span>
       </label>
     </fieldset>
 
     <label class="modd-notes-field">
-      <span>Observaciones</span>
-      <textarea id="event-notes" rows="3" placeholder="Requerimientos especiales, acomodo o notas"></textarea>
+      <span>Descripcion</span>
+      <textarea id="event-notes" rows="3" placeholder="Detalles breves del evento"></textarea>
     </label>
 
     <div class="modd-modal-actions">
@@ -467,7 +481,7 @@
     document.getElementById('logout-link')?.addEventListener('click', function (event) {
       event.preventDefault();
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/api/auth/logout';
     });
   });
 </script>

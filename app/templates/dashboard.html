@@ -368,11 +368,6 @@
     color: var(--red);
   }
 
-  .badge-cancelled {
-    background: #e5e8f0;
-    color: #6b7a99;
-  }
-
   [data-theme="dark"] .badge-pending {
     background: #332a00;
     color: #ffc107;
@@ -386,11 +381,6 @@
   [data-theme="dark"] .badge-rejected {
     background: #3d1a1a;
     color: #ef5350;
-  }
-
-  [data-theme="dark"] .badge-cancelled {
-    background: #2a2d3a;
-    color: #a0a0a0;
   }
 
   .empty-state {
@@ -551,10 +541,9 @@
       </a>
     </nav>
 
-    <hr class="sidebar-divider">
 
     <div class="sidebar-footer">
-      <a href="/login" id="logout-link">
+      <a href="/api/auth/logout" id="logout-link">
         <i data-lucide="log-out"></i> Cerrar sesión
       </a>
     </div>
@@ -712,7 +701,7 @@
       e.preventDefault();
       // Limpiar datos de sesión (simulado)
       localStorage.removeItem('token'); // si se usa
-      window.location.href = '/login';
+      window.location.href = '/api/auth/logout';
     });
 
     loadDashboardData();
@@ -745,7 +734,7 @@
       const start = startOfWeek(new Date());
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
-      const activeEvents = events.filter(event => event.estado_evento !== 'cancelado');
+      const activeEvents = events;
       const eventsToday = activeEvents.filter(event => event.fecha === today);
       const pendingRequests = requests.filter(request => request.estado === 'pendiente');
       const weekEvents = activeEvents.filter(event => {
@@ -774,7 +763,6 @@
       const nowKey = localDateKey(new Date());
       const nowMinutes = minutesFromDate(new Date());
       const upcoming = events
-        .filter(event => event.estado_evento !== 'cancelado')
         .filter(event => event.fecha > nowKey || (event.fecha === nowKey && minutesFromTime(event.hora_de_termino) >= nowMinutes))
         .sort((a, b) => `${a.fecha} ${a.hora_de_inicio}`.localeCompare(`${b.fecha} ${b.hora_de_inicio}`))
         .slice(0, 5);
@@ -786,14 +774,13 @@
 
       tbody.innerHTML = upcoming.map(event => {
         const rooms = (event.salas || []).map(sala => `Sala ${sala.numero_sala}`).join(', ') || 'Sin sala';
-        const status = event.estado_evento || 'pendiente';
         return `
           <tr>
             <td>
               <div class="event-title">${escapeHTML(event.titulo)}</div>
               <div class="event-meta">${escapeHTML(rooms)} · ${formatDate(event.fecha)} · ${formatTime(event.hora_de_inicio)} - ${formatTime(event.hora_de_termino)}</div>
             </td>
-            <td style="text-align:right;"><span class="badge-status ${badgeClass(status)}">${escapeHTML(labelStatus(status))}</span></td>
+            <td style="text-align:right;"></td>
           </tr>
         `;
       }).join('');
@@ -827,7 +814,7 @@
       const today = localDateKey(new Date());
       const totals = { 1: 0, 2: 0, 3: 0 };
       events
-        .filter(event => event.fecha === today && event.estado_evento !== 'cancelado')
+        .filter(event => event.fecha === today)
         .forEach(event => {
           const duration = Math.max(0, minutesFromTime(event.hora_de_termino) - minutesFromTime(event.hora_de_inicio)) / 60;
           (event.salas || []).forEach(sala => {
@@ -857,14 +844,13 @@
     }
 
     function badgeClass(status) {
-      if (status === 'confirmado' || status === 'aprobada') return 'badge-approved';
+      if (status === 'programado' || status === 'aprobada') return 'badge-approved';
       if (status === 'rechazada') return 'badge-rejected';
-      if (status === 'cancelado' || status === 'cancelada') return 'badge-cancelled';
       return 'badge-pending';
     }
 
     function labelStatus(status) {
-      const labels = { confirmado: 'Confirmado', pendiente: 'Pendiente', cancelado: 'Cancelado', aprobada: 'Aprobada', rechazada: 'Rechazada', cancelada: 'Cancelada' };
+      const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
       return labels[status] || status;
     }
 
@@ -911,4 +897,6 @@
   });
 </script>
 {% endblock %}
+
+
 

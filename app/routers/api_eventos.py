@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select  # <-- Importar select
 from typing import List
 
 from app.core.database import get_db
-from app.models.salas import Evento, Sala
+from app.models.salas import Evento, Sala, Solicitud
 from app.schemas.salas import EventoOut, EventoCreate, EventoUpdate
 
 router = APIRouter(prefix="/api/eventos", tags=["Eventos"])
@@ -34,32 +34,55 @@ def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_
             detail="Una o más salas especificadas no existen.",
         )
 
-    if evento.estado_evento == "cancelado":
-        return salas_asignadas
-
     eventos_mismo_dia = db.execute(
-        select(Evento).where(Evento.fecha == evento.fecha)
+        select(Evento)
+        .outerjoin(Solicitud)
+        .where(Evento.fecha == evento.fecha)
+        .where((Solicitud.estado.is_(None)) | (Solicitud.estado != "rechazada"))
     ).scalars().all()
 
+    salas_ocupadas = set()
+    salas_en_conflicto = set()
     for existente in eventos_mismo_dia:
         if id_ignorado is not None and existente.id_evento == id_ignorado:
             continue
-        if existente.estado_evento == "cancelado":
-            continue
-        if not any(sala.numero_sala in salas_ids for sala in existente.salas):
-            continue
         if evento.hora_de_inicio < existente.hora_de_termino and evento.hora_de_termino > existente.hora_de_inicio:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="No se puede guardar: el evento se solapa con otro en la misma sala y horario.",
-            )
+            for sala in existente.salas:
+                salas_ocupadas.add(sala.numero_sala)
+                if sala.numero_sala in salas_ids:
+                    salas_en_conflicto.add(sala.numero_sala)
+
+    if salas_en_conflicto:
+        todas_las_salas = db.execute(select(Sala).order_by(Sala.numero_sala)).scalars().all()
+        salas_disponibles = [
+            f"Sala {sala.numero_sala}"
+            for sala in todas_las_salas
+            if sala.numero_sala not in salas_ocupadas
+        ]
+        sugerencia = (
+            f" Puedes usar {', '.join(salas_disponibles)} en ese horario."
+            if salas_disponibles
+            else " No hay otra sala disponible en ese bloque."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No se puede guardar: el evento se solapa con otro en la misma sala y horario.{sugerencia}",
+        )
 
     return salas_asignadas
 
 
 @router.get("/", response_model=List[EventoOut])
-async def obtener_eventos(db: Session = Depends(get_db)):
-    eventos = db.execute(select(Evento)).scalars().all()
+async def obtener_eventos(solo_aprobadas: bool = False, db: Session = Depends(get_db)):
+    stmt = select(Evento).options(
+        selectinload(Evento.salas),
+        selectinload(Evento.requerimientos),
+        selectinload(Evento.solicitud).selectinload(Solicitud.solicitante),
+    )
+    if solo_aprobadas:
+        stmt = stmt.join(Solicitud).where(Solicitud.estado == "aprobada")
+
+    eventos = db.execute(stmt.order_by(Evento.fecha, Evento.hora_de_inicio)).scalars().all()
     return eventos
 
 
@@ -84,8 +107,6 @@ async def crear_evento(evento: EventoCreate, db: Session = Depends(get_db)):
         hora_de_inicio=evento.hora_de_inicio,
         hora_de_termino=evento.hora_de_termino,
         no_de_asistentes=evento.no_de_asistentes,
-        tipo=evento.tipo,
-        estado_evento=evento.estado_evento,
         id_solicitud=evento.id_solicitud,
         id_requerimientos=evento.id_requerimientos,
     )
@@ -126,8 +147,6 @@ async def actualizar_evento(id_evento: int, evento: EventoUpdate, db: Session = 
     evento_db.hora_de_inicio = evento.hora_de_inicio
     evento_db.hora_de_termino = evento.hora_de_termino
     evento_db.no_de_asistentes = evento.no_de_asistentes
-    evento_db.tipo = evento.tipo
-    evento_db.estado_evento = evento.estado_evento
     evento_db.id_solicitud = evento.id_solicitud
     evento_db.id_requerimientos = evento.id_requerimientos
 
@@ -150,7 +169,15 @@ async def actualizar_evento(id_evento: int, evento: EventoUpdate, db: Session = 
 
 @router.delete("/{id_evento}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_evento(id_evento: int, db: Session = Depends(get_db)):
-    evento = db.get(Evento, id_evento)
+    evento = db.execute(
+        select(Evento)
+        .where(Evento.id_evento == id_evento)
+        .options(
+            selectinload(Evento.salas),
+            selectinload(Evento.requerimientos),
+            selectinload(Evento.solicitud).selectinload(Solicitud.solicitante),
+        )
+    ).scalars().first()
 
     if not evento:
         raise HTTPException(
@@ -158,5 +185,15 @@ async def eliminar_evento(id_evento: int, db: Session = Depends(get_db)):
             detail="El evento especificado no existe.",
         )
 
+    solicitud = evento.solicitud
+    solicitante = solicitud.solicitante if solicitud else None
+    requerimientos = evento.requerimientos
+    evento.salas.clear()
     db.delete(evento)
+    if requerimientos:
+        db.delete(requerimientos)
+    if solicitud:
+        db.delete(solicitud)
+    if solicitante and len(solicitante.solicitudes) <= 1:
+        db.delete(solicitante)
     db.commit()

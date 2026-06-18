@@ -564,8 +564,7 @@ body {
   color: #8a6200;
 }
 
-.status-pill.rechazada,
-.status-pill.cancelada {
+.status-pill.rechazada {
   background: rgba(213, 67, 60, 0.12);
   border: 1px solid rgba(213, 67, 60, 0.55);
   color: #9f1f1a;
@@ -688,6 +687,16 @@ body {
   height: 3.45rem;
   justify-content: center;
   width: 3.45rem;
+}
+
+.report-inline-field {
+  color: var(--text, var(--color-text-primary));
+  display: grid;
+  font-size: 0.85rem;
+  font-weight: 800;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  max-width: 240px;
 }
 
 .filter-panel {
@@ -832,8 +841,7 @@ body {
   color: #ffd37a;
 }
 
-[data-theme="dark"] .status-pill.rechazada,
-[data-theme="dark"] .status-pill.cancelada {
+[data-theme="dark"] .status-pill.rechazada {
   color: #ffb3b0;
 }
 
@@ -1396,6 +1404,30 @@ select:focus {
   display: block;
 }
 
+.modd-modal-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #d5433c;
+  border-radius: 0.6rem;
+  color: #991b1b;
+  display: none;
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-top: 1rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.modd-modal-alert.show {
+  display: block;
+}
+
+.modd-modal-alert.success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #5ca847;
+  color: #166534;
+}
+
 .modd-week-calendar,
 .modd-fullcalendar-wrap {
   background: var(--surface, var(--color-surface));
@@ -1550,31 +1582,6 @@ select:focus {
   margin-top: 0.12rem;
   overflow-wrap: anywhere;
   white-space: normal;
-}
-
-.modd-event-status {
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 0.62rem;
-  font-weight: 800;
-  margin-top: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  text-transform: uppercase;
-}
-
-.modd-event-status.confirmado {
-  background: rgba(36, 57, 138, 0.12);
-  color: #24398A;
-}
-
-.modd-event-status.pendiente {
-  background: rgba(235, 169, 59, 0.18);
-  color: #946721;
-}
-
-.modd-event-status.cancelado {
-  background: rgba(213, 67, 60, 0.13);
-  color: #D5433C;
 }
 
 .modd-resize-handle {
@@ -1779,6 +1786,56 @@ select:focus {
   width: 100%;
 }
 
+.request-check-grid {
+  border: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+}
+
+.request-check-grid legend {
+  color: var(--text, var(--color-text-primary));
+  font-size: 0.75rem;
+  font-weight: 800;
+  grid-column: 1 / -1;
+  margin-bottom: -0.2rem;
+}
+
+.modd-checkbox-card {
+  align-items: center;
+  background: var(--bg, var(--color-background));
+  border: 1px solid var(--border, var(--color-border));
+  border-radius: 0.55rem;
+  cursor: pointer;
+  display: flex;
+  gap: 0.65rem;
+  min-height: 3rem;
+  padding: 0.75rem;
+}
+
+.modd-checkbox-card input {
+  accent-color: var(--blue-600, var(--color-azul-institucional));
+  flex: 0 0 auto;
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+.modd-checkbox-card span {
+  align-items: center;
+  color: var(--text, var(--color-text-primary));
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 800;
+  gap: 0.45rem;
+}
+
+.modd-checkbox-card:has(input:checked) {
+  background: color-mix(in srgb, var(--blue-600, #24398A) 10%, var(--surface, #fff));
+  border-color: var(--blue-600, #24398A);
+}
+
 .modd-room-select {
   border: 0;
   margin-top: 1.15rem;
@@ -1830,16 +1887,22 @@ select:focus {
   color: #ffb3b0;
 }
 
+[data-theme="dark"] .modd-modal-alert {
+  background: #3d1a1a;
+  border-color: #6b2626;
+  border-left-color: #ff7770;
+  color: #ffb3b0;
+}
+
+[data-theme="dark"] .modd-modal-alert.success {
+  background: #15351f;
+  border-color: #2f6d3e;
+  border-left-color: #85d17b;
+  color: #9be19a;
+}
+
 [data-theme="dark"] .modd-event-card {
   background: color-mix(in srgb, var(--event-color) 20%, var(--surface, #1e1e2e));
-}
-
-[data-theme="dark"] .modd-event-status.confirmado {
-  color: #9fb4ff;
-}
-
-[data-theme="dark"] .modd-event-status.pendiente {
-  color: #ffd37a;
 }
 
 [data-theme="dark"] .modd-modal-backdrop {

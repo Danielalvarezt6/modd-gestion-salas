@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
 from app.core.database import get_db
+from app.core.security import require_authenticated_page
 from app.models.salas import Solicitud, Evento
+from app.models.usuarios import Usuario
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -24,19 +26,23 @@ async def login_page(request: Request):
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard_page(request: Request):
+async def dashboard_page(request: Request, current_user: Usuario = Depends(require_authenticated_page)):
     """Renderiza la página del dashboard tras iniciar sesión."""
     return templates.TemplateResponse(request=request, name="dashboard.html")
 
 
 @router.get("/calendario", response_class=HTMLResponse)
-async def calendar_page(request: Request):
+async def calendar_page(request: Request, current_user: Usuario = Depends(require_authenticated_page)):
     """Renderiza la seccion visual del calendario."""
     return templates.TemplateResponse(request=request, name="calendario.html")
 
 
 @router.get("/solicitudes", response_class=HTMLResponse)
-async def requests_page(request: Request, db: Session = Depends(get_db)):
+async def requests_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_authenticated_page),
+):
     """Renderiza la seccion visual de solicitudes."""
     solicitudes_db = db.execute(select(Solicitud)).scalars().all()
 
@@ -65,7 +71,11 @@ async def requests_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/eventos", response_class=HTMLResponse)
-async def events_page(request: Request, db: Session = Depends(get_db)):
+async def events_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_authenticated_page),
+):
     eventos_db = db.execute(select(Evento)).scalars().all()
 
     count_stmt = select(func.count(Evento.id_evento))
@@ -77,6 +87,6 @@ async def events_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/reportes", response_class=HTMLResponse)
-async def reports_page(request: Request):
+async def reports_page(request: Request, current_user: Usuario = Depends(require_authenticated_page)):
     """Renderiza la seccion visual de reportes."""
     return templates.TemplateResponse(request=request, name="reportes.html")

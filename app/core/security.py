@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta, timezone
+from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
+from jose.exceptions import JWTError
+from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.core.database import get_db
+from app.models.usuarios import Usuario
 import bcrypt
 
 
@@ -46,3 +51,38 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     )
 
     return encoded_jwt
+
+
+def _token_from_cookie(request: Request) -> str | None:
+    raw_token = request.cookies.get("access_token")
+    if not raw_token:
+        return None
+    return raw_token.replace("Bearer ", "", 1)
+
+
+def get_current_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Usuario:
+    token = _token_from_cookie(request)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autenticado")
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        correo = payload.get("sub")
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida") from exc
+
+    if not correo:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida")
+
+    usuario = db.query(Usuario).filter(Usuario.correo == correo).first()
+    if not usuario or not usuario.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida")
+
+    return usuario
+
+
+def require_authenticated_page(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+    return current_user

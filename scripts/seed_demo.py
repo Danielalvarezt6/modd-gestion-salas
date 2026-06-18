@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 from datetime import date, time
 
@@ -7,7 +7,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from app.core.database import SessionLocal
-from app.models.salas import Evento, Requerimientos, Sala, Solicitante, Solicitud
+from app.models.salas import Evento, Requerimientos, Sala, Solicitante, Solicitud, sala_evento
 
 
 SALAS = (
@@ -19,46 +19,70 @@ SALAS = (
 
 DEMO_DATA = (
     {
-        "solicitante": ("Ana", "Torres", "ana.torres@unison.mx", "6621000001", "Depto. de Letras"),
-        "solicitud": (date(2026, 6, 18), time(9, 0), "pendiente"),
-        "requerimientos": ("Teatro", True, False, False),
-        "evento": ("Seminario de Posgrado", "Seminario con proyector y registro de asistentes", date(2026, 6, 22), time(8, 0), time(10, 0), 45, "seminario", "pendiente", [2]),
+        "solicitante": ("Daniela", "Moreno", "daniela.moreno@unison.mx", "6621000001"),
+        "solicitud": (date(2026, 6, 17), time(9, 0), "aprobada"),
+        "requerimientos": ("Aula con filas", True, False, True),
+        "evento": ("Clase de Bases de Datos", "Sesion practica con videoconferencia y equipo de sonido", date(2026, 6, 16), time(8, 0), time(10, 0), 28, [1]),
     },
     {
-        "solicitante": ("Veronica", "Cruz", "v.cruz@unison.mx", "6621000002", "Depto. de Ciencias"),
+        "solicitante": ("Gabriel", "Mireles", "gabriel.mireles@unison.mx", "6621000002"),
+        "solicitud": (date(2026, 6, 17), time(10, 0), "aprobada"),
+        "requerimientos": ("Mesa ejecutiva", True, True, False),
+        "evento": ("Reunion de Coordinacion", "Revision semanal de actividades y acuerdos", date(2026, 6, 17), time(11, 0), time(13, 0), 12, [2]),
+    },
+    {
+        "solicitante": ("Lucia", "Navarro", "lucia.navarro@unison.mx", "6621000003"),
+        "solicitud": (date(2026, 6, 18), time(8, 0), "aprobada"),
+        "requerimientos": ("Teatro", True, False, True),
+        "evento": ("Seminario de Investigacion", "Presentacion de avances de tesis", date(2026, 6, 18), time(8, 0), time(10, 0), 40, [1]),
+    },
+    {
+        "solicitante": ("Martin", "Aguirre", "martin.aguirre@unison.mx", "6621000004"),
+        "solicitud": (date(2026, 6, 18), time(9, 0), "aprobada"),
+        "requerimientos": ("Laboratorio colaborativo", False, True, False),
+        "evento": ("Taller de Prototipos", "Trabajo por equipos con servicio de cafeteria", date(2026, 6, 18), time(10, 0), time(12, 0), 24, [2]),
+    },
+    {
+        "solicitante": ("Paola", "Rios", "paola.rios@unison.mx", "6621000005"),
         "solicitud": (date(2026, 6, 18), time(10, 0), "aprobada"),
-        "requerimientos": ("Aula filas", True, False, True),
-        "evento": ("Clase Medicina", "Clase con videoconferencia", date(2026, 6, 23), time(9, 0), time(11, 0), 25, "clase", "confirmado", [3]),
+        "requerimientos": ("Auditorio", True, True, True),
+        "evento": ("Foro de Emprendimiento", "Foro con transmision y coffee break", date(2026, 6, 18), time(13, 0), time(15, 0), 60, [3]),
     },
     {
-        "solicitante": ("Diana", "Morales", "diana.morales@gmail.com", "6621000003", "Empresa externa"),
-        "solicitud": (date(2026, 6, 18), time(11, 0), "pendiente"),
-        "requerimientos": ("U / Herradura", False, False, False),
-        "evento": ("Clase Literatura", "Sesion externa de literatura", date(2026, 6, 26), time(9, 0), time(12, 0), 22, "clase", "pendiente", [2]),
+        "solicitante": ("Roberto", "Silva", "roberto.silva@empresa.mx", "6621000006"),
+        "solicitud": (date(2026, 6, 19), time(9, 0), "pendiente"),
+        "requerimientos": ("Grupos de trabajo", False, False, True),
+        "evento": ("Workshop de Innovacion", "Sesion externa de innovacion", date(2026, 6, 19), time(9, 0), time(12, 0), 35, [1]),
     },
     {
-        "solicitante": ("Sandra", "Lopez", "sandra.lopez@unison.mx", "6621000004", "Depto. de Economia"),
-        "solicitud": (date(2026, 6, 19), time(8, 30), "rechazada"),
-        "requerimientos": ("Teatro", True, True, False),
-        "evento": ("Conferencia de Finanzas", "Conferencia con servicio de cafeteria", date(2026, 6, 26), time(13, 0), time(16, 0), 70, "conferencia", "cancelado", [3]),
-    },
-    {
-        "solicitante": ("Roberto", "Silva", "rsilva@empresa.mx", "6621000005", "Empresa externa"),
-        "solicitud": (date(2026, 6, 19), time(9, 30), "aprobada"),
-        "requerimientos": ("Grupos de trabajo", True, False, True),
-        "evento": ("Workshop de Innovacion", "Trabajo por equipos con pizarrones", date(2026, 6, 25), time(8, 0), time(12, 0), 35, "taller", "confirmado", [1]),
-    },
-    {
-        "solicitante": ("Luis", "Ramos", "luis.ramos@unison.mx", "6621000006", "Direccion Academica"),
-        "solicitud": (date(2026, 6, 19), time(10, 30), "aprobada"),
-        "requerimientos": ("Mesa ejecutiva", True, False, True),
-        "evento": ("Reunion de Decanos", "Reunion de coordinacion institucional", date(2026, 6, 24), time(12, 0), time(14, 0), 12, "reunion", "confirmado", [1]),
-    },
-    {
-        "solicitante": ("Personal", "UNISON", "mantenimiento@unison.mx", "6621000007", "Universidad de Sonora"),
-        "solicitud": (date(2026, 6, 20), time(8, 0), "aprobada"),
+        "solicitante": ("Personal", "UNISON", "mantenimiento@unison.mx", "6621000007"),
+        "solicitud": (date(2026, 6, 19), time(11, 0), "aprobada"),
         "requerimientos": ("Mantenimiento", False, False, False),
-        "evento": ("Mantenimiento preventivo", "Revision de equipo y cableado", date(2026, 6, 22), time(8, 0), time(12, 0), 2, "mantenimiento", "confirmado", [3]),
+        "evento": ("Mantenimiento Preventivo", "Revision de cableado, audio y videoconferencia", date(2026, 6, 20), time(8, 0), time(11, 0), 2, [2]),
+    },
+    {
+        "solicitante": ("Sofia", "Valdez", "sofia.valdez@unison.mx", "6621000008"),
+        "solicitud": (date(2026, 6, 20), time(12, 0), "rechazada"),
+        "requerimientos": ("Herradura", False, False, False),
+        "evento": ("Mesa de Analisis", "Solicitud rechazada visible para revisar solicitudes", date(2026, 6, 23), time(10, 0), time(12, 0), 18, [2]),
+    },
+    {
+        "solicitante": ("Hector", "Salazar", "hector.salazar@unison.mx", "6621000009"),
+        "solicitud": (date(2026, 6, 20), time(13, 0), "aprobada"),
+        "requerimientos": ("Aula", True, False, False),
+        "evento": ("Clase de Arquitectura", "Revision de proyectos finales", date(2026, 6, 24), time(12, 0), time(14, 0), 32, [1]),
+    },
+    {
+        "solicitante": ("Mariana", "Cota", "mariana.cota@unison.mx", "6621000010"),
+        "solicitud": (date(2026, 6, 21), time(8, 0), "aprobada"),
+        "requerimientos": ("Teatro", True, True, True),
+        "evento": ("Conferencia de Ciencia de Datos", "Conferencia con asistentes externos", date(2026, 6, 26), time(13, 0), time(16, 0), 68, [3]),
+    },
+    {
+        "solicitante": ("Ivan", "Castro", "ivan.castro@unison.mx", "6621000012"),
+        "solicitud": (date(2026, 6, 22), time(10, 0), "aprobada"),
+        "requerimientos": ("Mesa ejecutiva", True, False, True),
+        "evento": ("Comite Academico", "Sesion mensual del comite", date(2026, 6, 30), time(16, 0), time(18, 0), 14, [2]),
     },
 )
 
@@ -74,76 +98,62 @@ def get_or_create_sala(db, numero_sala, capacidad):
     return sala
 
 
-def get_or_create_solicitante(db, data):
-    nombre, apellido, correo, telefono, institucion = data
-    solicitante = db.query(Solicitante).filter(Solicitante.correo == correo).first()
-    if not solicitante:
-        solicitante = Solicitante(correo=correo)
-        db.add(solicitante)
-
-    solicitante.nombre = nombre
-    solicitante.apellido = apellido
-    solicitante.no_de_telefono = telefono
-    solicitante.institucion = institucion
-    return solicitante
-
-
-def find_event(db, titulo, fecha):
-    return db.query(Evento).filter(Evento.titulo == titulo, Evento.fecha == fecha).first()
+def clear_demo_data(db):
+    db.execute(sala_evento.delete())
+    db.query(Evento).delete(synchronize_session=False)
+    db.query(Solicitud).delete(synchronize_session=False)
+    db.query(Requerimientos).delete(synchronize_session=False)
+    db.query(Solicitante).delete(synchronize_session=False)
 
 
 def seed():
     db = SessionLocal()
     try:
+        clear_demo_data(db)
+
         for numero_sala, capacidad in SALAS:
             get_or_create_sala(db, numero_sala, capacidad)
         db.flush()
 
         for item in DEMO_DATA:
-            solicitante = get_or_create_solicitante(db, item["solicitante"])
+            nombre, apellido, correo, telefono = item["solicitante"]
             fecha_solicitud, hora_solicitud, estado_solicitud = item["solicitud"]
             acomodo, sonido, cafeteria, videoconferencia = item["requerimientos"]
-            titulo, descripcion, fecha_evento, inicio, fin, asistentes, tipo, estado_evento, salas_ids = item["evento"]
+            titulo, descripcion, fecha_evento, inicio, fin, asistentes, salas_ids = item["evento"]
 
-            evento = find_event(db, titulo, fecha_evento)
-            if not evento:
-                solicitud = Solicitud(
-                    fecha_solicitud=fecha_solicitud,
-                    hora_de_solicitud=hora_solicitud,
-                    estado=estado_solicitud,
-                    solicitante=solicitante,
-                )
-                requerimientos = Requerimientos()
-                evento = Evento(solicitud=solicitud, requerimientos=requerimientos)
-                db.add(evento)
-            else:
-                solicitud = evento.solicitud or Solicitud(solicitante=solicitante)
-                requerimientos = evento.requerimientos or Requerimientos()
-                evento.solicitud = solicitud
-                evento.requerimientos = requerimientos
-
-            evento.solicitud.fecha_solicitud = fecha_solicitud
-            evento.solicitud.hora_de_solicitud = hora_solicitud
-            evento.solicitud.estado = estado_solicitud
-            evento.solicitud.solicitante = solicitante
-
-            evento.requerimientos.acomodo = acomodo
-            evento.requerimientos.equipo_de_sonido = sonido
-            evento.requerimientos.cafeteria = cafeteria
-            evento.requerimientos.videoconferencia = videoconferencia
-
-            evento.titulo = titulo
-            evento.descripcion = descripcion
-            evento.fecha = fecha_evento
-            evento.hora_de_inicio = inicio
-            evento.hora_de_termino = fin
-            evento.no_de_asistentes = asistentes
-            evento.tipo = tipo
-            evento.estado_evento = estado_evento
-            evento.salas = [db.get(Sala, sala_id) for sala_id in salas_ids]
+            solicitante = Solicitante(
+                nombre=nombre,
+                apellido=apellido,
+                correo=correo,
+                no_de_telefono=telefono,
+            )
+            solicitud = Solicitud(
+                fecha_solicitud=fecha_solicitud,
+                hora_de_solicitud=hora_solicitud,
+                estado=estado_solicitud,
+                solicitante=solicitante,
+            )
+            requerimientos = Requerimientos(
+                acomodo=acomodo,
+                equipo_de_sonido=sonido,
+                cafeteria=cafeteria,
+                videoconferencia=videoconferencia,
+            )
+            evento = Evento(
+                titulo=titulo,
+                descripcion=descripcion,
+                fecha=fecha_evento,
+                hora_de_inicio=inicio,
+                hora_de_termino=fin,
+                no_de_asistentes=asistentes,
+                solicitud=solicitud,
+                requerimientos=requerimientos,
+                salas=[db.get(Sala, sala_id) for sala_id in salas_ids],
+            )
+            db.add(evento)
 
         db.commit()
-        print("Base de datos llenada con datos demo de MODD.")
+        print(f"Base de datos reiniciada y llenada con {len(DEMO_DATA)} eventos demo de MODD.")
     except Exception:
         db.rollback()
         raise
@@ -153,3 +163,4 @@ def seed():
 
 if __name__ == "__main__":
     seed()
+

@@ -33,13 +33,15 @@
 
   async function cargarEventosDesdeApi() {
     try {
-      const response = await fetch('/api/eventos');
+      const response = await fetch('/api/eventos/?solo_aprobadas=true');
       if (!response.ok) throw new Error('Error de red al cargar eventos');
 
       const eventosDB = await response.json();
 
       // Traducir el JSON de la base de datos al formato que espera FullCalendar
-      events = eventosDB.filter((evt) => evt.estado_evento !== 'cancelado').map((evt) => {
+      events = eventosDB.map((evt) => {
+        const solicitante = evt.solicitud?.solicitante || {};
+        const responsable = [solicitante.nombre, solicitante.apellido].filter(Boolean).join(' ') || 'Solicitante no asignado';
         return {
           id: String(evt.id_evento),
           title: evt.titulo,
@@ -48,9 +50,14 @@
           end: `${evt.fecha}T${evt.hora_de_termino}`,
           // Convertimos [{numero_sala: 1}] a ['sala1']
           rooms: evt.salas.map((s) => `sala${s.numero_sala}`),
-          status: evt.estado_evento || 'confirmado',
-          responsible: 'Usuario',
-          notes: evt.descripcion || ''
+          responsible: responsable,
+          requestFirstName: solicitante.nombre || '',
+          requestLastName: solicitante.apellido || '',
+          requestEmail: solicitante.correo || '',
+          requestPhone: solicitante.no_de_telefono || '',
+          notes: evt.descripcion || '',
+          attendees: evt.no_de_asistentes || 0,
+          requirements: evt.requerimientos || {}
         };
       });
       warnExistingConflicts();
@@ -238,7 +245,6 @@
       <strong class="modd-event-title">${escapeHTML(eventItem.title)}</strong>
       <span class="modd-event-meta">${getEventTime(eventItem.start)} - ${getEventTime(eventItem.end)} - ${eventItem.rooms.map((roomId) => findRoom(roomId).name).join(', ')}</span>
       <span class="modd-event-responsible">${escapeHTML(eventItem.responsible)}</span>
-      <span class="modd-event-status ${eventItem.status}">${eventItem.status}</span>
       <span class="modd-resize-handle modd-room-resize-handle" title="Extender salas" aria-hidden="true"></span>
       <span class="modd-duration-resize-handle" title="Extender horas" aria-hidden="true"></span>
     `;
@@ -340,8 +346,8 @@
     }
 
     dragState.proposed = proposed;
-    const conflict = hasConflict(proposed, proposed.id);
-    showGuide(targetColumn, proposed, conflict);
+    const conflict = getConflictInfo(proposed, proposed.id);
+    showGuide(targetColumn, proposed, conflict.hasConflict);
   }
 
   async function finishPointerInteraction() {
@@ -360,8 +366,9 @@
     }
 
     if (eventItem && proposed) {
-      if (hasConflict(proposed, proposed.id)) {
-        showAlert('No se puede aplicar el cambio: el evento se solapa con otro en la misma sala y horario.');
+      const conflict = getConflictInfo(proposed, proposed.id);
+      if (conflict.hasConflict) {
+        showAlert(buildConflictMessage(conflict, 'No se puede aplicar el cambio'));
       } else {
         Object.assign(eventItem, proposed);
         try {
@@ -459,9 +466,10 @@
       end: toLocalDateTime(info.event.end || addMinutes(info.event.start, 60))
     };
 
-    if (hasConflict(proposed, proposed.id)) {
+    const conflict = getConflictInfo(proposed, proposed.id);
+    if (conflict.hasConflict) {
       info.revert();
-      showAlert('No se puede aplicar el cambio: el evento se solapa con otro en la misma sala y horario.');
+      showAlert(buildConflictMessage(conflict, 'No se puede aplicar el cambio'));
       return;
     }
 
@@ -491,8 +499,7 @@
         borderColor: getEventColor(eventItem),
         extendedProps: {
           rooms: eventItem.rooms,
-          responsible: eventItem.responsible,
-          status: eventItem.status
+          responsible: eventItem.responsible
         }
       });
     });
@@ -505,21 +512,31 @@
     const date = eventData.date || getEventDate(eventData) || toISODate(new Date());
 
     if (!modal) return;
+    hideModalAlert();
 
     title.textContent = isExisting ? 'Editar evento' : 'Nuevo evento';
     document.getElementById('event-id').value = eventData.id || '';
+    document.getElementById('request-first-name').value = eventData.requestFirstName || '';
+    document.getElementById('request-last-name').value = eventData.requestLastName || '';
+    document.getElementById('request-email').value = eventData.requestEmail || '';
+    document.getElementById('request-phone').value = eventData.requestPhone || '';
     document.getElementById('event-title').value = eventData.title || '';
-    document.getElementById('event-responsible').value = eventData.responsible || '';
     document.getElementById('event-date').value = date;
     document.getElementById('event-start').value = eventData.startTime || getEventTime(eventData.start) || '09:00';
     document.getElementById('event-end').value = eventData.endTime || getEventTime(eventData.end) || '10:00';
-    document.getElementById('event-status').value = eventData.status || 'confirmado';
     document.getElementById('event-notes').value = eventData.notes || '';
+    document.getElementById('event-attendees').value = eventData.attendees || 0;
+    document.getElementById('event-layout').value = eventData.requirements?.acomodo || '';
+    document.getElementById('event-audio').checked = Boolean(eventData.requirements?.equipo_de_sonido);
+    document.getElementById('event-catering').checked = Boolean(eventData.requirements?.cafeteria);
+    document.getElementById('event-video').checked = Boolean(eventData.requirements?.videoconferencia);
     document.getElementById('event-delete-button')?.classList.toggle('hidden', !isExisting);
 
     const selectedRooms = eventData.rooms?.length ? eventData.rooms : ['sala1'];
-    document.querySelectorAll('input[name="event-room"]').forEach((input) => {
-      input.checked = selectedRooms.includes(input.value);
+    document.getElementById('event-room-single').value = selectedRooms[0]?.replace('sala', '') || '1';
+    ['request-first-name', 'request-last-name', 'request-email', 'request-phone'].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) input.disabled = isExisting;
     });
 
     modal.classList.remove('hidden');
@@ -532,6 +549,7 @@
     const modal = document.getElementById('event-modal');
     if (!modal || modal.classList.contains('hidden')) return;
 
+    hideModalAlert();
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -544,7 +562,7 @@
     const date = document.getElementById('event-date').value;
     const startTime = document.getElementById('event-start').value;
     const endTime = document.getElementById('event-end').value;
-    const selectedRooms = Array.from(document.querySelectorAll('input[name="event-room"]:checked')).map((input) => input.value);
+    const selectedRooms = [`sala${document.getElementById('event-room-single').value}`];
 
     if (!selectedRooms.length) {
       showAlert('Selecciona al menos una sala.');
@@ -568,39 +586,39 @@
       fecha: date, // "YYYY-MM-DD"
       hora_de_inicio: `${startTime}:00`, // Pydantic espera formato "HH:MM:SS"
       hora_de_termino: `${endTime}:00`,
-      tipo: 'clase',
-      estado_evento: document.getElementById('event-status').value,
       // Convertimos los IDs del HTML ['sala1', 'sala2'] a una lista de enteros [1, 2]
       salas_ids: selectedRooms.map(room => parseInt(room.replace('sala', ''))),
-      no_de_asistentes: 0 // Valor por defecto
+      no_de_asistentes: Number(document.getElementById('event-attendees').value || 0)
     };
 
-    // Validación visual de conflictos (se mantiene tu lógica actual)
+    // Validacion visual de conflictos antes de guardar.
     const tempProposed = {
       start: `${date}T${startTime}:00`,
       end: `${date}T${endTime}:00`,
       rooms: selectedRooms,
-      status: document.getElementById('event-status').value
     };
-    if (hasConflict(tempProposed, id)) {
-      showAlert('No se puede guardar: el evento se solapa con otro en la misma sala y horario.');
+    const conflict = getConflictInfo(tempProposed, id);
+    if (conflict.hasConflict) {
+      showAlert(buildConflictMessage(conflict, 'No se puede guardar'));
       return;
     }
 
-    // 2. Enviamos los datos al backend (POST)
+    // 2. Enviamos los datos al backend
     try {
-      const response = await fetch(id ? `/api/eventos/${id}` : '/api/eventos/', {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cargaUtilAPI)
-      });
+      const response = id
+        ? await fetch(`/api/eventos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cargaUtilAPI)
+          })
+        : await createApprovedRequestFromModal(date, startTime, endTime, selectedRooms);
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Error al guardar el evento');
       }
 
-      // 3. Si se guardó bien, volvemos a descargar todos los eventos para que se pinten correctamente
+      // 3. Si se guardo bien, volvemos a descargar todos los eventos para que se pinten correctamente.
       await cargarEventosDesdeApi();
 
       closeEventModal();
@@ -614,28 +632,55 @@
   }
 
   function hasConflict(proposed, ignoredId) {
-    if (proposed.status === 'cancelado') return false;
+    return getConflictInfo(proposed, ignoredId).hasConflict;
+  }
 
+  function getConflictInfo(proposed, ignoredId) {
     const proposedStart = new Date(proposed.start).getTime();
     const proposedEnd = new Date(proposed.end).getTime();
     const proposedDate = getEventDate(proposed);
+    const occupiedRooms = new Set();
+    const conflictingRooms = new Set();
 
-    return events.some((eventItem) => {
-      if (eventItem.id === ignoredId || eventItem.status === 'cancelado') return false;
-      if (getEventDate(eventItem) !== proposedDate) return false;
-      if (!eventItem.rooms.some((roomId) => proposed.rooms.includes(roomId))) return false;
+    events.forEach((eventItem) => {
+      if (eventItem.id === ignoredId) return;
+      if (getEventDate(eventItem) !== proposedDate) return;
 
       const eventStart = new Date(eventItem.start).getTime();
       const eventEnd = new Date(eventItem.end).getTime();
-      return proposedStart < eventEnd && proposedEnd > eventStart;
+      if (!(proposedStart < eventEnd && proposedEnd > eventStart)) return;
+
+      eventItem.rooms.forEach((roomId) => {
+        occupiedRooms.add(roomId);
+        if (proposed.rooms.includes(roomId)) conflictingRooms.add(roomId);
+      });
     });
+
+    const availableRooms = rooms
+      .map((room) => room.id)
+      .filter((roomId) => !occupiedRooms.has(roomId));
+
+    return {
+      hasConflict: conflictingRooms.size > 0,
+      conflictingRooms: Array.from(conflictingRooms),
+      availableRooms
+    };
+  }
+
+  function buildConflictMessage(conflict, prefix) {
+    const base = `${prefix}: el evento se solapa con otro en la misma sala y horario.`;
+    if (!conflict.availableRooms.length) {
+      return `${base} No hay otra sala disponible en ese bloque.`;
+    }
+    const suggestions = conflict.availableRooms.map((roomId) => findRoom(roomId).name).join(', ');
+    return `${base} Puedes usar ${suggestions} en ese horario.`;
   }
 
   async function deleteEventFromModal() {
     const id = document.getElementById('event-id').value;
     if (!id) return;
 
-    const confirmed = window.confirm('¿Eliminar este evento definitivamente?');
+    const confirmed = window.confirm('Eliminar este evento definitivamente?');
     if (!confirmed) return;
 
     try {
@@ -652,6 +697,42 @@
     } catch (error) {
       showAlert(`Error: ${error.message}`, 'error');
     }
+  }
+
+  async function createApprovedRequestFromModal(date, startTime, endTime, selectedRooms) {
+    const payload = {
+      solicitante_nombre: document.getElementById('request-first-name').value.trim(),
+      solicitante_apellido: document.getElementById('request-last-name').value.trim(),
+      solicitante_correo: document.getElementById('request-email').value.trim(),
+      solicitante_telefono: document.getElementById('request-phone').value.trim() || null,
+      evento_titulo: document.getElementById('event-title').value.trim(),
+      evento_descripcion: document.getElementById('event-notes').value.trim() || null,
+      evento_fecha: date,
+      evento_inicio: `${startTime}:00`,
+      evento_fin: `${endTime}:00`,
+      evento_asistentes: Number(document.getElementById('event-attendees').value || 0),
+      sala_id: parseInt(selectedRooms[0].replace('sala', ''), 10),
+      acomodo: document.getElementById('event-layout').value.trim() || null,
+      equipo_de_sonido: document.getElementById('event-audio').checked,
+      cafeteria: document.getElementById('event-catering').checked,
+      videoconferencia: document.getElementById('event-video').checked
+    };
+
+    const createResponse = await fetch('/api/solicitudes/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!createResponse.ok) return createResponse;
+
+    const created = await createResponse.json();
+    const approveResponse = await fetch(`/api/solicitudes/${created.id_solicitud}/estado`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'aprobada' })
+    });
+
+    return approveResponse.ok ? createResponse : approveResponse;
   }
 
   function warnExistingConflicts() {
@@ -692,9 +773,7 @@
       fecha: getEventDate(eventItem),
       hora_de_inicio: `${getEventTime(eventItem.start)}:00`,
       hora_de_termino: `${getEventTime(eventItem.end)}:00`,
-      no_de_asistentes: eventItem.no_de_asistentes || 0,
-      tipo: eventItem.tipo || 'clase',
-      estado_evento: eventItem.status || 'confirmado',
+      no_de_asistentes: eventItem.attendees || eventItem.no_de_asistentes || 0,
       salas_ids: eventItem.rooms.map((room) => parseInt(room.replace('sala', ''), 10))
     };
   }
@@ -716,27 +795,41 @@
   }
 
   function showAlert(message, type) {
-    const alert = document.getElementById('calendar-alert');
+    const modal = document.getElementById('event-modal');
+    const modalIsOpen = modal && !modal.classList.contains('hidden');
+    const alert = modalIsOpen && type !== 'success'
+      ? document.getElementById('event-modal-alert')
+      : document.getElementById('calendar-alert');
     if (!alert) return;
 
     alert.textContent = message;
     alert.classList.add('show');
-    alert.style.background = type === 'success' ? '#F0FDF4' : '';
-    alert.style.borderColor = type === 'success' ? '#BBF7D0' : '';
-    alert.style.color = type === 'success' ? '#166534' : '';
+    alert.classList.toggle('success', type === 'success');
+    if (alert.id === 'calendar-alert') {
+      alert.style.background = type === 'success' ? '#F0FDF4' : '';
+      alert.style.borderColor = type === 'success' ? '#BBF7D0' : '';
+      alert.style.color = type === 'success' ? '#166534' : '';
+    }
+    alert.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
     window.clearTimeout(alertTimer);
     alertTimer = window.setTimeout(() => {
       alert.classList.remove('show');
+      alert.classList.remove('success');
       alert.textContent = '';
       alert.removeAttribute('style');
     }, 4200);
   }
 
+  function hideModalAlert() {
+    const alert = document.getElementById('event-modal-alert');
+    if (!alert) return;
+    alert.classList.remove('show', 'success');
+    alert.textContent = '';
+  }
+
 
   function getEventColor(eventItem) {
-    if (eventItem.status === 'cancelado') return '#D5433C';
-    if (eventItem.status === 'pendiente') return '#EBA93B';
     return findRoom(eventItem.rooms[0])?.color || '#24398A';
   }
 
@@ -835,3 +928,4 @@
       .replaceAll("'", '&#039;');
   }
 })();
+

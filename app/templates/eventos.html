@@ -24,7 +24,7 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <a href="/login" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
     </div>
   </aside>
 
@@ -36,7 +36,7 @@
       </div>
       <div class="admin-topbar-actions">
         <button class="admin-primary-button" id="new-event-btn" type="button">
-          <i data-lucide="plus" class="w-4 h-4"></i> Nuevo
+          <i data-lucide="plus" class="w-4 h-4"></i> Nuevo evento
         </button>
         <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
           <i data-lucide="menu" class="w-6 h-6"></i>
@@ -47,8 +47,6 @@
 
     <section class="admin-stat-grid" aria-label="Resumen de eventos">
       <div class="admin-stat-card"><div class="admin-stat-value">0</div><div class="admin-stat-label">Total eventos</div></div>
-      <div class="admin-stat-card" style="--stat-color:#176b2b"><div class="admin-stat-value">0</div><div class="admin-stat-label">Confirmados</div></div>
-      <div class="admin-stat-card" style="--stat-color:#6b7a99"><div class="admin-stat-value">0</div><div class="admin-stat-label">Mantenimiento</div></div>
       <div class="admin-stat-card" style="--stat-color:#8a6200"><div class="admin-stat-value">0</div><div class="admin-stat-label">Esta semana</div></div>
     </section>
 
@@ -63,14 +61,6 @@
         <option value="sala2">Sala 2</option>
         <option value="sala3">Sala 3</option>
       </select>
-      <select id="type-filter" class="admin-select" aria-label="Tipo">
-        <option value="todos">Todos los tipos</option>
-        <option value="clase">Clase</option>
-        <option value="taller">Taller</option>
-        <option value="reunion">Reunion</option>
-        <option value="mantenimiento">Mantenimiento</option>
-        <option value="conferencia">Conferencia</option>
-      </select>
     </section>
 
     <section class="admin-panel">
@@ -84,13 +74,11 @@
               <th>Dia</th>
               <th>Horario</th>
               <th>Asistentes</th>
-              <th>Tipo</th>
-              <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="9" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>
+            <tr><td colspan="7" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>
           </tbody>
         </table>
       </div>
@@ -139,12 +127,12 @@
         <input id="detail-attendees" type="number" min="0">
       </label>
       <label>
-        <span>Tipo</span>
-        <input id="detail-type" type="text">
+        <span>Acomodo</span>
+        <input id="detail-layout" type="text" readonly>
       </label>
       <label>
-        <span>Estado</span>
-        <input id="detail-status" type="text">
+        <span>Requerimientos</span>
+        <input id="detail-requirements" type="text" readonly>
       </label>
     </div>
 
@@ -166,7 +154,6 @@
     const toggle = document.getElementById('sidebar-toggle');
     const search = document.getElementById('event-search');
     const room = document.getElementById('room-filter');
-    const type = document.getElementById('type-filter');
     const tableBody = document.querySelector('#events-table tbody');
     let rows = Array.from(document.querySelectorAll('#events-table tbody tr'));
 
@@ -185,15 +172,14 @@
       const term = (search.value || '').trim().toLowerCase();
       rows.forEach(function (row) {
         const roomMatch = room.value === 'todas' || row.dataset.room === room.value;
-        const typeMatch = type.value === 'todos' || row.dataset.type === type.value;
         const searchMatch = !term || row.dataset.search.includes(term);
-        row.style.display = roomMatch && typeMatch && searchMatch ? '' : 'none';
+        row.style.display = roomMatch && searchMatch ? '' : 'none';
       });
     }
 
     loadEventsFromApi();
 
-    [search, room, type].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
+    [search, room].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
     const modal = document.getElementById('event-detail-modal');
     const detailForm = document.getElementById('event-detail-form');
     let activeRow = null;
@@ -224,8 +210,6 @@
               hora_de_inicio: activeRow.dataset.start,
               hora_de_termino: activeRow.dataset.end,
               no_de_asistentes: Number(document.getElementById('detail-attendees').value || 0),
-              tipo: document.getElementById('detail-type').value.toLowerCase(),
-              estado_evento: document.getElementById('detail-status').value.toLowerCase(),
               salas_ids: [Number(document.getElementById('detail-room').value.replace(/[^0-9]/g, '') || 1)]
             })
           });
@@ -242,8 +226,6 @@
       activeRow.children[3].textContent = document.getElementById('detail-day').value;
       activeRow.children[4].textContent = document.getElementById('detail-time').value;
       activeRow.children[5].textContent = document.getElementById('detail-attendees').value;
-      activeRow.children[6].textContent = document.getElementById('detail-type').value;
-      activeRow.children[7].querySelector('.status-pill').textContent = document.getElementById('detail-status').value;
       activeRow.dataset.search = activeRow.textContent.trim().toLowerCase();
 
       closeEventDetail();
@@ -260,8 +242,8 @@
       document.getElementById('detail-day').value = row.children[3].textContent.trim();
       document.getElementById('detail-time').value = row.children[4].textContent.trim();
       document.getElementById('detail-attendees').value = row.children[5].textContent.trim();
-      document.getElementById('detail-type').value = row.children[6].textContent.trim();
-      document.getElementById('detail-status').value = row.children[7].textContent.trim();
+      document.getElementById('detail-layout').value = row.dataset.layout || 'Sin acomodo';
+      document.getElementById('detail-requirements').value = row.dataset.requirements || 'Sin requerimientos';
 
       detailForm.querySelectorAll('input').forEach(function (input) {
         input.readOnly = !editable;
@@ -279,14 +261,14 @@
     }
 
     async function loadEventsFromApi() {
-      tableBody.innerHTML = '<tr><td colspan="9" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>';
       rows = [];
       try {
         const response = await fetch('/api/eventos/');
         if (!response.ok) throw new Error('No se pudieron cargar eventos.');
         const events = await response.json();
         if (!events.length) {
-          tableBody.innerHTML = '<tr><td colspan="9" class="admin-muted">No hay eventos registrados. Crea uno desde el calendario con el boton Nuevo evento.</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados. Crea uno desde el calendario con el boton Nuevo evento.</td></tr>';
           rows = [];
           updateEventStats([]);
           return;
@@ -295,20 +277,19 @@
         tableBody.innerHTML = events.map(function (item) {
           const roomNames = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
           const roomKey = item.salas[0] ? 'sala' + item.salas[0].numero_sala : 'sala1';
-          const typeKey = item.tipo || 'clase';
-          const status = item.estado_evento || 'confirmado';
-          const searchText = [item.titulo, item.descripcion, roomNames, typeKey, status].join(' ').toLowerCase();
+          const requester = item.solicitud?.solicitante || {};
+          const responsible = [requester.nombre, requester.apellido].filter(Boolean).join(' ') || 'Solicitante no asignado';
+
+          const searchText = [item.titulo, item.descripcion, responsible, roomNames].join(' ').toLowerCase();
 
           return `
-            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-type="${typeKey}" data-search="${escapeAttr(searchText)}">
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
               <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
-              <td>Responsable no asignado</td>
+              <td>${escapeHTML(responsible)}</td>
               <td><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
               <td>${formatDate(item.fecha)}</td>
               <td class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
               <td>${item.no_de_asistentes || 0}</td>
-              <td>${escapeHTML(typeKey)}</td>
-              <td><span class="status-pill ${status}">${escapeHTML(status)}</span></td>
               <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
             </tr>
           `;
@@ -343,12 +324,23 @@
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
       values[0].textContent = events.length;
-      values[1].textContent = events.filter((event) => event.estado_evento === 'confirmado').length;
-      values[2].textContent = events.filter((event) => event.tipo === 'mantenimiento').length;
-      values[3].textContent = events.filter((event) => {
+      values[1].textContent = events.filter((event) => {
         const date = new Date(event.fecha + 'T00:00:00');
         return date >= weekStart && date < weekEnd;
       }).length;
+    }
+
+    function requirementsLayout(item) {
+      return item.requerimientos?.acomodo || 'Sin acomodo';
+    }
+
+    function requirementsText(item) {
+      const req = item.requerimientos || {};
+      const values = [];
+      if (req.equipo_de_sonido) values.push('Equipo de sonido');
+      if (req.cafeteria) values.push('Cafeteria');
+      if (req.videoconferencia) values.push('Videoconferencia');
+      return values.join(', ') || 'Sin requerimientos';
     }
 
     function formatDate(value) {
@@ -366,7 +358,7 @@
     document.getElementById('logout-link')?.addEventListener('click', function (event) {
       event.preventDefault();
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/api/auth/logout';
     });
 
     function showToast(message) {
@@ -378,4 +370,5 @@
   });
 </script>
 {% endblock %}
+
 

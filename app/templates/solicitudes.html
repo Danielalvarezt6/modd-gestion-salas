@@ -24,7 +24,7 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <a href="/login" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
     </div>
   </aside>
 
@@ -67,14 +67,13 @@
     <section class="admin-filter-row" aria-label="Filtros de solicitudes">
       <div class="admin-field-with-icon">
         <i data-lucide="search" class="w-4 h-4"></i>
-        <input id="request-search" type="search" placeholder="Buscar por nombre, evento o institucion...">
+        <input id="request-search" type="search" placeholder="Buscar por nombre, correo o evento...">
       </div>
       <select id="request-status" class="admin-select" aria-label="Estado">
         <option value="todas">Todos los estados</option>
         <option value="pendiente">Pendientes</option>
         <option value="aprobada">Aprobadas</option>
         <option value="rechazada">Rechazadas</option>
-        <option value="cancelada">Canceladas</option>
       </select>
     </section>
 
@@ -85,8 +84,8 @@
             <tr>
               <th>ID</th>
               <th>Solicitante</th>
-              <th>Institucion</th>
               <th>Evento</th>
+              <th>Requerimientos</th>
               <th>Sala</th>
               <th>Fecha / Hora</th>
               <th>Estado</th>
@@ -154,10 +153,6 @@
         <input name="solicitante_telefono" type="tel" placeholder="662 000 0000">
       </label>
       <label class="modd-form-span">
-        Institucion
-        <input name="institucion" type="text" value="Universidad de Sonora">
-      </label>
-      <label class="modd-form-span">
         Evento
         <input name="evento_titulo" type="text" required placeholder="Seminario de investigacion">
       </label>
@@ -189,31 +184,25 @@
         Asistentes
         <input name="evento_asistentes" type="number" min="0" value="0">
       </label>
-      <label>
-        Tipo
-        <select name="evento_tipo">
-          <option value="clase">Clase</option>
-          <option value="seminario">Seminario</option>
-          <option value="reunion">Reunion</option>
-          <option value="conferencia">Conferencia</option>
-          <option value="taller">Taller</option>
-          <option value="mantenimiento">Mantenimiento</option>
-          <option value="general">General</option>
-        </select>
-      </label>
       <label class="modd-form-span">
         Acomodo
         <input name="acomodo" type="text" placeholder="Teatro, aula, herradura...">
       </label>
-      <label class="modd-checkbox-label">
-        <input name="equipo_de_sonido" type="checkbox"> Equipo de sonido
-      </label>
-      <label class="modd-checkbox-label">
-        <input name="cafeteria" type="checkbox"> Cafeteria
-      </label>
-      <label class="modd-checkbox-label">
-        <input name="videoconferencia" type="checkbox"> Videoconferencia
-      </label>
+      <fieldset class="modd-form-span request-check-grid">
+        <legend>Requerimientos</legend>
+        <label class="modd-checkbox-card">
+          <input name="equipo_de_sonido" type="checkbox">
+          <span><i data-lucide="volume-2" class="w-4 h-4"></i> Equipo de sonido</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="cafeteria" type="checkbox">
+          <span><i data-lucide="coffee" class="w-4 h-4"></i> Cafeteria</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="videoconferencia" type="checkbox">
+          <span><i data-lucide="video" class="w-4 h-4"></i> Videoconferencia</span>
+        </label>
+      </fieldset>
     </div>
 
     <div class="modd-modal-actions">
@@ -302,7 +291,7 @@
     document.getElementById('logout-link')?.addEventListener('click', function (event) {
       event.preventDefault();
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/api/auth/logout';
     });
 
     function showToast(message) {
@@ -335,9 +324,6 @@
       if (createForm?.elements.evento_fecha) {
         createForm.elements.evento_fecha.value = new Date().toISOString().slice(0, 10);
       }
-      if (createForm?.elements.institucion) {
-        createForm.elements.institucion.value = 'Universidad de Sonora';
-      }
       createModal.classList.remove('hidden');
       createModal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
@@ -357,14 +343,12 @@
         solicitante_apellido: formData.get('solicitante_apellido'),
         solicitante_correo: formData.get('solicitante_correo'),
         solicitante_telefono: formData.get('solicitante_telefono') || null,
-        institucion: formData.get('institucion') || 'Universidad de Sonora',
         evento_titulo: formData.get('evento_titulo'),
         evento_descripcion: formData.get('evento_descripcion') || null,
         evento_fecha: formData.get('evento_fecha'),
         evento_inicio: `${formData.get('evento_inicio')}:00`,
         evento_fin: `${formData.get('evento_fin')}:00`,
         evento_asistentes: Number(formData.get('evento_asistentes') || 0),
-        evento_tipo: formData.get('evento_tipo') || 'general',
         sala_id: Number(formData.get('sala_id')),
         acomodo: formData.get('acomodo') || null,
         equipo_de_sonido: Boolean(formData.get('equipo_de_sonido')),
@@ -412,17 +396,18 @@
           const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
           const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
           const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
-          const searchText = [item.solicitante_nombre, item.solicitante_correo, item.institucion, item.evento_titulo, salas].join(' ').toLowerCase();
+          const requerimientos = formatRequirements(item);
+          const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
           const action = estado === 'pendiente'
-            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button>'
-            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button>';
+            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>'
+            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
 
           return `
             <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}">
-              <td class="admin-muted">sol${item.id_solicitud}</td>
+              <td class="admin-muted">${item.id_solicitud}</td>
               <td><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
-              <td>${escapeHTML(item.institucion || 'Sin institucion')}</td>
-              <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes · ${escapeHTML(item.evento_tipo || 'general')}</div></td>
+              <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
+              <td>${escapeHTML(requerimientos)}</td>
               <td>${escapeHTML(salas)}</td>
               <td><div>${escapeHTML(fecha)}</div><div class="admin-muted">${escapeHTML(horario)}</div></td>
               <td><span class="status-pill ${estado}">${escapeHTML(capitalize(estado))}</span></td>
@@ -446,6 +431,22 @@
         button.dataset.bound = 'true';
         button.addEventListener('click', async function () {
           const row = button.closest('tr');
+          if (button.dataset.action === 'delete') {
+            const confirmed = window.confirm('Eliminar esta solicitud definitivamente?');
+            if (!confirmed) return;
+            try {
+              const response = await fetch(`/api/solicitudes/${row.dataset.id}`, { method: 'DELETE' });
+              if (!response.ok) throw new Error('No se pudo eliminar la solicitud.');
+              row.remove();
+              rows = rows.filter(function (item) { return item !== row; });
+              updateStats();
+              applyFilters();
+              showToast('Solicitud eliminada correctamente.');
+            } catch (error) {
+              showToast(error.message);
+            }
+            return;
+          }
           if (button.dataset.action === 'view' || button.dataset.action === 'edit') {
             openRequestDetail(row);
             return;
@@ -470,8 +471,9 @@
             row.dataset.status = nextStatus;
             row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
             row.querySelector('.status-pill').textContent = capitalize(nextStatus);
-            row.querySelector('.admin-action-row').innerHTML = '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button>';
+            row.querySelector('.admin-action-row').innerHTML = '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
             bindRequestActions();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             updateStats();
             applyFilters();
             showToast('Solicitud actualizada correctamente.');
@@ -483,7 +485,7 @@
     }
 
     function updateStats() {
-      const counts = { todas: rows.length, pendiente: 0, aprobada: 0, rechazada: 0, cancelada: 0 };
+      const counts = { todas: rows.length, pendiente: 0, aprobada: 0, rechazada: 0 };
       rows.forEach(function (row) { counts[row.dataset.status] = (counts[row.dataset.status] || 0) + 1; });
       cards.forEach(function (card) {
         card.querySelector('.admin-stat-value').textContent = counts[card.dataset.statusCard] || 0;
@@ -496,8 +498,8 @@
       detailContent.innerHTML = `
         <div><span>ID</span><strong>${escapeHTML(cells[0] || '')}</strong></div>
         <div><span>Solicitante</span><strong>${escapeHTML(cells[1] || '')}</strong></div>
-        <div><span>Institucion</span><strong>${escapeHTML(cells[2] || '')}</strong></div>
-        <div><span>Evento</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
+        <div><span>Evento</span><strong>${escapeHTML(cells[2] || '')}</strong></div>
+        <div><span>Requerimientos</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
         <div><span>Sala</span><strong>${escapeHTML(cells[4] || '')}</strong></div>
         <div><span>Fecha / Hora</span><strong>${escapeHTML(cells[5] || '')}</strong></div>
         <div><span>Estado</span><strong>${escapeHTML(cells[6] || '')}</strong></div>
@@ -515,6 +517,15 @@
 
     function capitalize(value) {
       return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+    }
+
+    function formatRequirements(item) {
+      const values = [];
+      if (item.acomodo) values.push('Acomodo: ' + item.acomodo);
+      if (item.equipo_de_sonido) values.push('Equipo de sonido');
+      if (item.cafeteria) values.push('Cafeteria');
+      if (item.videoconferencia) values.push('Videoconferencia');
+      return values.join(', ') || 'Sin requerimientos';
     }
 
     function escapeHTML(value) {

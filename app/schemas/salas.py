@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+﻿from pydantic import BaseModel, EmailStr
 from datetime import date, time
 from typing import Optional, List
 
@@ -43,9 +43,8 @@ class RequerimientosOut(RequerimientosBase):
 class SolicitanteBase(BaseModel):
     nombre: str
     apellido: str
-    correo: EmailStr  # Valida automáticamente que lleve '@' y '.com'
+    correo: EmailStr  # Valida automaticamente que lleve '@' y '.com'
     no_de_telefono: Optional[str] = None
-    institucion: Optional[str] = "Universidad de Sonora"
 
 
 class SolicitanteCreate(SolicitanteBase):
@@ -91,13 +90,15 @@ class SolicitudResumenOut(BaseModel):
     hora_de_solicitud: time
     solicitante_nombre: str
     solicitante_correo: str
-    institucion: Optional[str] = None
     evento_titulo: Optional[str] = None
     evento_fecha: Optional[date] = None
     evento_inicio: Optional[time] = None
     evento_fin: Optional[time] = None
     evento_asistentes: Optional[int] = None
-    evento_tipo: Optional[str] = None
+    acomodo: Optional[str] = None
+    equipo_de_sonido: Optional[bool] = False
+    cafeteria: Optional[bool] = False
+    videoconferencia: Optional[bool] = False
     salas: List[SalaOut] = []
 
 
@@ -110,14 +111,12 @@ class SolicitudEventoCreate(BaseModel):
     solicitante_apellido: str
     solicitante_correo: EmailStr
     solicitante_telefono: Optional[str] = None
-    institucion: Optional[str] = "Universidad de Sonora"
     evento_titulo: str
     evento_descripcion: Optional[str] = None
     evento_fecha: date
     evento_inicio: time
     evento_fin: time
     evento_asistentes: Optional[int] = 0
-    evento_tipo: Optional[str] = "general"
     sala_id: int
     acomodo: Optional[str] = None
     equipo_de_sonido: Optional[bool] = False
@@ -135,14 +134,12 @@ class EventoBase(BaseModel):
     hora_de_inicio: time
     hora_de_termino: time
     no_de_asistentes: Optional[int] = None
-    tipo: Optional[str] = "clase"
-    estado_evento: Optional[str] = "confirmado"
 
 
 class EventoCreate(EventoBase):
     id_solicitud: Optional[int] = None
     id_requerimientos: Optional[int] = None
-    # Cuando el frontend envíe el formulario, mandará un arreglo de salas ej: [101, 102]
+    # Cuando el frontend envie el formulario, mandara un arreglo de salas ej: [101, 102]
     salas_ids: Optional[List[int]] = []
 
 
@@ -156,9 +153,10 @@ class EventoOut(EventoBase):
     id_requerimientos: Optional[int] = None
 
     # Anidamos los schemas "Out" para que al pedir un evento,
-    # FastAPI traiga toda la info útil de golpe:
+    # FastAPI traiga toda la info util de golpe:
     salas: List[SalaOut] = []
     requerimientos: Optional[RequerimientosOut] = None
+    solicitud: Optional[SolicitudOut] = None
 
     class Config:
         from_attributes = True
@@ -166,10 +164,7 @@ class EventoOut(EventoBase):
 
 class ReporteResumenOut(BaseModel):
     total_eventos: int
-    confirmados: int
-    pendientes: int
-    cancelados: int
-    mantenimiento: int
     total_asistentes: int
     uso_por_sala: List[dict]
     eventos: List[EventoOut]
+

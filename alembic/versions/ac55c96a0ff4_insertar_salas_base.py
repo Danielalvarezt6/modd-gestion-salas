@@ -1,7 +1,7 @@
 """insertar salas base
 
 Revision ID: ac55c96a0ff4
-Revises: 23c6ec1f1aa0
+Revises: d8e1c16088f4
 Create Date: 2026-06-18 02:03:38.553896
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'ac55c96a0ff4'
-down_revision: Union[str, None] = '23c6ec1f1aa0'
+down_revision: Union[str, None] = 'd8e1c16088f4'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

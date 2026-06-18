@@ -24,7 +24,7 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <a href="/login" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
     </div>
   </aside>
 
@@ -80,20 +80,29 @@
         </div>
         <div>
           <h3>Informe por Sala</h3>
-          <p>Actividad detallada de una sala especifica en el periodo seleccionado.</p>
+          <p>Actividad detallada de una sala especifica. Puedes combinarlo con las fechas de abajo.</p>
+          <label class="report-inline-field">
+            Sala
+            <select class="admin-select" id="single-room-report">
+              <option value="">Selecciona una sala</option>
+              <option value="1">Sala 1</option>
+              <option value="2">Sala 2</option>
+              <option value="3">Sala 3</option>
+            </select>
+          </label>
           <button class="admin-primary-button mt-4" data-report-type="sala" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
         </div>
       </article>
 
-      <article class="report-card" data-search="personalizado rango fechas salas tipo evento">
+      <article class="report-card" data-search="personalizado rango fechas salas reporte filtros">
         <div class="report-icon" style="--report-bg:rgba(225,183,61,.17);--report-color:#8a6200">
           <i data-lucide="file-cog" class="w-6 h-6"></i>
         </div>
         <div>
           <h3>Reporte Personalizado</h3>
-          <p>Define rango de fechas, salas y tipo de evento para exportar.</p>
+          <p>Define rango de fechas y sala en los filtros de abajo para exportar.</p>
           <button class="admin-primary-button mt-4" data-report-type="personalizado" type="button">
             <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
           </button>
@@ -102,7 +111,7 @@
     </section>
 
     <section class="filter-panel">
-      <h3>Filtros personalizados</h3>
+      <h3>Reporte personalizado</h3>
       <div class="filter-grid">
         <label>
           Fecha inicio
@@ -115,16 +124,13 @@
         <label>
           Sala
           <select class="admin-select" id="report-room">
-            <option>Todas las salas</option>
-            <option>Sala 1</option>
-            <option>Sala 2</option>
-            <option>Sala 3</option>
+            <option value="">Todas las salas</option>
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
           </select>
         </label>
       </div>
-      <button class="admin-primary-button" id="export-filters" type="button">
-        <i data-lucide="download" class="w-4 h-4"></i> Exportar con filtros
-      </button>
     </section>
   </main>
 </div>
@@ -166,7 +172,7 @@
     document.getElementById('logout-link')?.addEventListener('click', function (event) {
       event.preventDefault();
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/api/auth/logout';
     });
 
     function showToast(message) {
@@ -180,12 +186,14 @@
       const params = new URLSearchParams();
       const startDate = document.getElementById('start-date').value;
       const endDate = document.getElementById('end-date').value;
-      const room = document.getElementById('report-room').value;
+      const room = type === 'sala'
+        ? document.getElementById('single-room-report').value
+        : document.getElementById('report-room').value;
       params.set('tipo', type);
       if ((type === 'personalizado' || type === 'sala') && startDate) params.set('fecha_inicio', startDate);
       if ((type === 'personalizado' || type === 'sala') && endDate) params.set('fecha_fin', endDate);
-      if ((type === 'personalizado' || type === 'sala') && room !== 'Todas las salas') params.set('sala', room.replace('Sala ', ''));
-      if (type === 'sala' && room === 'Todas las salas') {
+      if ((type === 'personalizado' || type === 'sala') && room) params.set('sala', room);
+      if (type === 'sala' && !room) {
         showToast('Selecciona una sala para generar el informe por sala.');
         return;
       }
@@ -201,7 +209,7 @@
       const room = document.getElementById('report-room').value;
       if (startDate) params.set('fecha_inicio', startDate);
       if (endDate) params.set('fecha_fin', endDate);
-      if (room !== 'Todas las salas') params.set('sala', room.replace('Sala ', ''));
+      if (room) params.set('sala', room);
 
       try {
         const response = await fetch('/api/reportes/resumen?' + params.toString());

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -14,7 +14,6 @@ def main():
     try:
         events = (
             db.query(Evento)
-            .filter(Evento.estado_evento != "cancelado")
             .order_by(Evento.fecha, Evento.hora_de_inicio)
             .all()
         )
@@ -50,3 +49,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

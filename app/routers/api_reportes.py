@@ -54,10 +54,6 @@ def _resumen_eventos(eventos):
 
     return {
         "total_eventos": len(eventos),
-        "confirmados": sum(1 for evento in eventos if evento.estado_evento == "confirmado"),
-        "pendientes": sum(1 for evento in eventos if evento.estado_evento == "pendiente"),
-        "cancelados": sum(1 for evento in eventos if evento.estado_evento == "cancelado"),
-        "mantenimiento": sum(1 for evento in eventos if evento.tipo == "mantenimiento"),
         "total_asistentes": sum(evento.no_de_asistentes or 0 for evento in eventos),
         "uso_por_sala": uso_por_sala,
     }
@@ -157,19 +153,16 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
     pdf.rule()
     pdf.text("Resumen", size=12, bold=True)
     pdf.row(
-        ["Eventos", "Confirmados", "Pendientes", "Cancelados", "Asistentes"],
-        [90, 105, 100, 100, 100],
+        ["Eventos", "Asistentes"],
+        [120, 120],
         bold=True,
     )
     pdf.row(
         [
             resumen["total_eventos"],
-            resumen["confirmados"],
-            resumen["pendientes"],
-            resumen["cancelados"],
             resumen["total_asistentes"],
         ],
-        [90, 105, 100, 100, 100],
+        [120, 120],
     )
     pdf.rule()
     pdf.text("Uso por sala", size=12, bold=True)
@@ -178,7 +171,7 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
         pdf.row([item["sala"], item["eventos"], item["asistentes"]], [180, 130, 130])
     pdf.rule()
     pdf.text("Detalle de eventos", size=12, bold=True)
-    pdf.row(["Fecha", "Horario", "Evento", "Sala", "Estado"], [72, 78, 190, 88, 82], bold=True)
+    pdf.row(["Fecha", "Horario", "Evento", "Sala"], [72, 78, 240, 100], bold=True)
     if not eventos:
         pdf.text("No hay eventos para los filtros seleccionados.", size=10)
     for evento in eventos:
@@ -189,21 +182,31 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
                 f"{evento.hora_de_inicio.strftime('%H:%M')}-{evento.hora_de_termino.strftime('%H:%M')}",
                 evento.titulo,
                 salas,
-                evento.estado_evento or "confirmado",
             ],
-            [72, 78, 190, 88, 82],
+            [72, 78, 240, 100],
         )
         pdf.row(
             [
                 "",
                 "",
-                f"{evento.no_de_asistentes or 0} asistentes - {evento.tipo or 'general'}",
-                "",
+                f"{evento.no_de_asistentes or 0} asistentes",
                 "",
             ],
-            [72, 78, 190, 88, 82],
+            [72, 78, 240, 100],
             size=7.5,
         )
+        if evento.requerimientos:
+            extras = []
+            if evento.requerimientos.acomodo:
+                extras.append(f"Acomodo: {evento.requerimientos.acomodo}")
+            if evento.requerimientos.equipo_de_sonido:
+                extras.append("Equipo de sonido")
+            if evento.requerimientos.cafeteria:
+                extras.append("Cafeteria")
+            if evento.requerimientos.videoconferencia:
+                extras.append("Videoconferencia")
+            if extras:
+                pdf.row(["", "", " | ".join(extras), ""], [72, 78, 240, 100], size=7.2)
     return pdf.build()
 
 
@@ -227,10 +230,6 @@ async def obtener_resumen_reportes(
 
     return ReporteResumenOut(
         total_eventos=resumen["total_eventos"],
-        confirmados=resumen["confirmados"],
-        pendientes=resumen["pendientes"],
-        cancelados=resumen["cancelados"],
-        mantenimiento=resumen["mantenimiento"],
         total_asistentes=resumen["total_asistentes"],
         uso_por_sala=resumen["uso_por_sala"],
         eventos=eventos,

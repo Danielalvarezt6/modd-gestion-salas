@@ -353,13 +353,6 @@
           <span id="submit-text">Iniciar sesión</span>
         </button>
       </form>
-
-      <!-- Demo badge -->
-      <div class="demo-badge">
-        <span style="font-weight:700">Credenciales de demostración:</span><br>
-        admin@unison.mx · modd2026
-      </div>
-
     </div>
   </div>
 
@@ -449,9 +442,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Submit real al backend de FastAPI
   loginForm.addEventListener('submit', async function(e) {
-    e.preventDefault(); // <-- Esto detiene el GET que viste en la consola
+    e.preventDefault(); 
     hideError();
 
     const email    = emailInput.value.trim();
