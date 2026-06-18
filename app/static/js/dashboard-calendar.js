@@ -23,12 +23,41 @@
 
   document.addEventListener('DOMContentLoaded', initCalendarModule);
 
-  function initCalendarModule() {
-    events = createSeedEvents();
+  async function initCalendarModule() {
+    await cargarEventosDesdeApi();
     bindControls();
     renderWeekCalendar();
     initFullCalendar();
     renderFullCalendarEvents();
+  }
+
+  async function cargarEventosDesdeApi() {
+    try {
+      const response = await fetch('/api/eventos');
+      if (!response.ok) throw new Error('Error de red al cargar eventos');
+
+      const eventosDB = await response.json();
+
+      // Traducir el JSON de la base de datos al formato que espera FullCalendar
+      events = eventosDB.map((evt) => {
+        return {
+          id: String(evt.id_evento),
+          title: evt.titulo,
+          // Unimos fecha y hora en formato ISO: "YYYY-MM-DDTHH:MM:SS"
+          start: `${evt.fecha}T${evt.hora_de_inicio}`,
+          end: `${evt.fecha}T${evt.hora_de_termino}`,
+          // Convertimos [{numero_sala: 1}] a ['sala1']
+          rooms: evt.salas.map((s) => `sala${s.numero_sala}`),
+          // Campos temporales (luego los podemos ligar a otras tablas)
+          status: 'confirmado',
+          responsible: 'Usuario',
+          notes: evt.descripcion || ''
+        };
+      });
+    } catch (error) {
+      console.error("Error al cargar eventos:", error);
+      showAlert('No se pudieron cargar los eventos de la base de datos.', 'error');
+    }
   }
 
   function bindControls() {
@@ -529,32 +558,55 @@
       return;
     }
 
-    const proposed = {
-      id: id || `evt-${Date.now()}`,
-      title: document.getElementById('event-title').value.trim(),
-      responsible: document.getElementById('event-responsible').value.trim(),
-      start: `${date}T${startTime}:00`,
-      end: `${date}T${endTime}:00`,
-      rooms: selectedRooms,
-      status: document.getElementById('event-status').value,
-      notes: document.getElementById('event-notes').value.trim()
+    // 1. Armamos el JSON con los nombres exactos que espera tu schema EventoCreate en FastAPI
+    const cargaUtilAPI = {
+      titulo: document.getElementById('event-title').value.trim(),
+      descripcion: document.getElementById('event-notes').value.trim(),
+      fecha: date, // "YYYY-MM-DD"
+      hora_de_inicio: `${startTime}:00`, // Pydantic espera formato "HH:MM:SS"
+      hora_de_termino: `${endTime}:00`,
+      // Convertimos los IDs del HTML ['sala1', 'sala2'] a una lista de enteros [1, 2]
+      salas_ids: selectedRooms.map(room => parseInt(room.replace('sala', ''))),
+      no_de_asistentes: 0 // Valor por defecto
     };
 
-    if (hasConflict(proposed, id || proposed.id)) {
+    // Validación visual de conflictos (se mantiene tu lógica actual)
+    const tempProposed = { start: `${date}T${startTime}:00`, end: `${date}T${endTime}:00`, rooms: selectedRooms, status: 'confirmado' };
+    if (hasConflict(tempProposed, id)) {
       showAlert('No se puede guardar: el evento se solapa con otro en la misma sala y horario.');
       return;
     }
 
-    const currentIndex = events.findIndex((item) => item.id === id);
-    if (currentIndex >= 0) {
-      events[currentIndex] = proposed;
-    } else {
-      events.push(proposed);
-    }
+    // 2. Enviamos los datos al backend (POST)
+    try {
+      // Si existe un ID, idealmente haríamos un PUT. Por ahora, si es nuevo, hacemos POST.
+      if (!id) {
+        const response = await fetch('/api/eventos/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cargaUtilAPI)
+        });
 
-    closeEventModal();
-    showAlert('Evento guardado en el calendario.', 'success');
-    rerenderActiveViews();
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Error al guardar el evento');
+        }
+      } else {
+        // TODO en el futuro: Lógica para editar (PUT) cuando hagas clic en un evento existente
+        console.log("Edición de eventos en base de datos pendiente de implementar en la API");
+      }
+
+      // 3. Si se guardó bien, volvemos a descargar todos los eventos para que se pinten correctamente
+      await cargarEventosDesdeAPI();
+
+      closeEventModal();
+      showAlert('Evento guardado exitosamente en la base de datos.', 'success');
+      rerenderActiveViews();
+
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      showAlert(`Error: ${error.message}`, 'error');
+    }
   }
 
   function hasConflict(proposed, ignoredId) {
@@ -609,71 +661,6 @@
     }, 4200);
   }
 
-  function createSeedEvents() {
-    const dates = Array.from({ length: 7 }, (_, index) => toISODate(addDays(weekStart, index)));
-    return [
-      {
-        id: 'evt-1',
-        title: 'Taller de Innovacion',
-        responsible: 'Dra. Alvarez',
-        start: `${dates[0]}T09:00:00`,
-        end: `${dates[0]}T11:00:00`,
-        rooms: ['sala1'],
-        status: 'confirmado',
-        notes: 'Montaje tipo aula'
-      },
-      {
-        id: 'evt-2',
-        title: 'Revision de solicitudes',
-        responsible: 'Admin UNISON',
-        start: `${dates[1]}T10:00:00`,
-        end: `${dates[1]}T12:00:00`,
-        rooms: ['sala2'],
-        status: 'pendiente',
-        notes: 'Validar capacidad'
-      },
-      {
-        id: 'evt-3',
-        title: 'Conferencia STEM',
-        responsible: 'Ing. Mendez',
-        start: `${dates[2]}T12:00:00`,
-        end: `${dates[2]}T14:00:00`,
-        rooms: ['sala1', 'sala2', 'sala3'],
-        status: 'confirmado',
-        notes: 'Videoconferencia y sonido'
-      },
-      {
-        id: 'evt-4',
-        title: 'Seminario de Investigacion',
-        responsible: 'Mtra. Gonzalez',
-        start: `${dates[3]}T15:00:00`,
-        end: `${dates[3]}T17:00:00`,
-        rooms: ['sala3'],
-        status: 'confirmado',
-        notes: 'Mesa redonda'
-      },
-      {
-        id: 'evt-5',
-        title: 'Presentacion de proyectos',
-        responsible: 'Daniel Alvarez',
-        start: `${dates[4]}T08:00:00`,
-        end: `${dates[4]}T10:00:00`,
-        rooms: ['sala1', 'sala2'],
-        status: 'confirmado',
-        notes: 'Equipo de proyeccion'
-      },
-      {
-        id: 'evt-6',
-        title: 'Clase de Diseno',
-        responsible: 'Coord. Academica',
-        start: `${dates[4]}T11:00:00`,
-        end: `${dates[4]}T12:00:00`,
-        rooms: ['sala3'],
-        status: 'cancelado',
-        notes: 'Cancelado por responsable'
-      }
-    ];
-  }
 
   function getEventColor(eventItem) {
     if (eventItem.status === 'cancelado') return '#D5433C';
