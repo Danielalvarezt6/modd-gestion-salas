@@ -1,31 +1,37 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from typing import List
-# from sqlalchemy.orm import Session
-# from app.core.database import get_db
-# from app.models.salas import Sala, Solicitud
 
-router = APIRouter()
+from app.core.database import get_db
+from app.models.salas import Sala
+from app.schemas.salas import SalaOut, SalaBase  # Importa tus schemas recién creados
 
-@router.get("/", response_model=list)
-async def obtener_salas():
-    """
-    Retorna la lista de salas disponibles (JSON).
-    El desarrollador del frontend consumirá esta ruta (GET /api/salas/).
-    """
+router = APIRouter(prefix="/api/salas", tags=["Salas"])
 
-    # Simulación de respuesta de base de datos
-    return [
-        {"numero_sala": 1, "capacidad": 30, "estado": "ocupada"},
-        {"numero_sala": 2, "capacidad": 50, "estado": "disponible"},
-        {"numero_sala": 3, "capacidad": 120, "estado":"disponible"}
-    ]
 
-@router.get("/solicitudes/pendientes")
-async def obtener_solicitudes_pendientes():
-    """
-    Retorna JSON con las solicitudes en espera de aprobación.
-    """
-    return [
-        {"id": 1, "titulo": "Taller de Innovación", "fecha": "2026-06-12", "sala": 1},
-        {"id": 2, "titulo": "Reunión Académica", "fecha": "2026-06-14", "sala": 2}
-    ]
+# 1. Endpoint para OBTENER todas las salas
+@router.get("/", response_model=List[SalaOut])
+async def obtener_salas(db: Session = Depends(get_db)):
+    # Hacemos la consulta real a Postgres
+    salas = db.execute(select(Sala)).scalars().all()
+    return salas
+
+
+# 2. Endpoint para CREAR una nueva sala (Útil si tienes un panel de admin)
+@router.post("/", response_model=SalaOut, status_code=status.HTTP_21_CREATED)
+async def crear_sala(sala: SalaBase, db: Session = Depends(get_db)):
+    stmt = select(Sala).where(Sala.numero_sala == sala.numero_sala)
+    sala_existente = db.execute(stmt).scalars().first()
+
+    if sala_existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"La sala número {sala.numero_sala} ya está registrada.",
+        )
+
+    nueva_sala = Sala(numero_sala=sala.numero_sala, capacidad=sala.capacidad)
+    db.add(nueva_sala)
+    db.commit()
+    db.refresh(nueva_sala)
+    return nueva_sala
