@@ -212,10 +212,6 @@
 {% block content %}
 
 <!-- Botón de tema flotante -->
-<button id="login-theme-toggle" class="theme-toggle-btn" title="Cambiar tema">
-  <i data-lucide="moon" class="w-4 h-4"></i>
-</button>
-
 <div class="login-wrap">
 
   <!-- ── Panel Izquierdo (Branding) ── -->
@@ -357,13 +353,6 @@
           <span id="submit-text">Iniciar sesión</span>
         </button>
       </form>
-
-      <!-- Demo badge -->
-      <div class="demo-badge">
-        <span style="font-weight:700">Credenciales de demostración:</span><br>
-        admin@unison.mx · modd2026
-      </div>
-
     </div>
   </div>
 
@@ -384,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ── Theme toggle ──
   const html = document.documentElement;
   const themeBtn = document.getElementById('login-theme-toggle');
+  if (themeBtn) {
 
   function updateThemeIcon(theme) {
     themeBtn.innerHTML = '';
@@ -403,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('theme', next);
     updateThemeIcon(next);
   });
+  }
 
   // ── Formulario ──
   const loginForm      = document.getElementById('login-form');
@@ -412,9 +403,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const submitBtn      = document.getElementById('submit-btn');
   const errorAlert     = document.getElementById('error-alert');
   const errorMessage   = document.getElementById('error-message');
-
-  const VALID_EMAIL    = 'admin@unison.mx';
-  const VALID_PASSWORD = 'modd2026';
 
   // Toggle mostrar/ocultar contraseña
   togglePwBtn.addEventListener('click', function() {
@@ -454,9 +442,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Submit
-  loginForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+  loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault(); 
     hideError();
 
     const email    = emailInput.value.trim();
@@ -467,15 +454,31 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    if (email !== VALID_EMAIL || password !== VALID_PASSWORD) {
-      showError('Credenciales incorrectas. Usa admin@unison.mx / modd2026');
-      return;
-    }
-
     setLoading(true);
-    setTimeout(function() {
-      window.location.href = '/dashboard';
-    }, 900);
+
+    try {
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.redirect || '/dashboard';
+      } else {
+        const errorData = await response.json();
+        showError(errorData.detail || 'Credenciales incorrectas');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error en la petición:", error);
+      showError('Error de conexión con el servidor. Revisa tu terminal.');
+      setLoading(false);
+    }
   });
 
   // Limpiar error al escribir

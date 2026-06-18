@@ -1,0 +1,902 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MODD{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Variables (heredadas de base.html) ── */
+  :root {
+    --blue-600: #24398A;
+    --blue-700: #1c2d6e;
+    --blue-50: #f0f3fc;
+    --blue-100: #dce3f7;
+    --gold: #E1B73D;
+    --gold-light: #fdf6e3;
+    --green: #5CA847;
+    --green-light: #edf7ec;
+    --red: #D5433C;
+    --red-light: #fef0f0;
+    --border: #e5e9f2;
+    --text: #1a2340;
+    --muted: #6b7a99;
+    --surface: #ffffff;
+    --bg: #f7f8fc;
+  }
+
+  [data-theme="dark"] {
+    --blue-600: #8da8ff;
+    --blue-700: #6f8be8;
+    --blue-50: rgba(91, 123, 214, 0.16);
+    --blue-100: #252d4d;
+    --gold: #f4cd56;
+    --gold-light: #332700;
+    --green: #85d17b;
+    --green-light: #1b3d1b;
+    --red: #ff7770;
+    --red-light: rgba(213, 67, 60, 0.16);
+    --border: #30384d;
+    --text: #f3f6ff;
+    --muted: #b7c0d6;
+    --surface: #1b2030;
+    --bg: #11131a;
+  }
+
+  /* ── Layout ── */
+  .dashboard-wrap {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .sidebar-brand img {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: contain;
+  }
+
+  .sidebar-brand h1 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--blue-600);
+    margin: 0;
+  }
+
+  .sidebar-brand small {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    display: block;
+    margin-top: -2px;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+
+  .sidebar-nav a.active {
+    background: var(--blue-50);
+    color: var(--blue-600);
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .sidebar-nav a:hover {
+    background: rgba(91, 123, 214, 0.15);
+    color: var(--blue-600);
+  }
+
+  [data-theme="dark"] .sidebar-nav a.active {
+    background: rgba(91, 123, 214, 0.2);
+    color: var(--blue-600);
+  }
+
+  .sidebar-nav a i {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar-footer a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .sidebar-footer a:hover {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  /* ── Main content ── */
+  .main-content {
+    flex: 1;
+    padding: 2rem 2rem 2rem 2.5rem;
+    overflow-x: hidden;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .topbar-left h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .topbar-left p {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s;
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(36, 57, 138, 0.06);
+  }
+
+  .stat-card .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-card .stat-number .highlight-blue {
+    color: var(--blue-600);
+  }
+
+  .stat-card .stat-number .highlight-gold {
+    color: var(--gold);
+  }
+
+  .stat-card .stat-number .highlight-green {
+    color: var(--green);
+  }
+
+  .stat-card .stat-number .highlight-red {
+    color: var(--red);
+  }
+
+  .stat-card .stat-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* ── Two column layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .panel-header a {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--blue-600);
+    text-decoration: none;
+  }
+
+  .panel-header a:hover {
+    text-decoration: underline;
+  }
+
+  .panel-body {
+    padding: 0.5rem 1rem;
+  }
+
+  /* ── Tablas simples ── */
+  .table-mini {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .table-mini td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .table-mini tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-mini .event-title {
+    font-weight: 600;
+  }
+
+  .table-mini .event-meta {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .badge-status {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-pending {
+    background: #fef3dc;
+    color: #9a7520;
+  }
+
+  .badge-approved {
+    background: var(--green-light);
+    color: #3d8035;
+  }
+
+  .badge-rejected {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  [data-theme="dark"] .badge-pending {
+    background: #332a00;
+    color: #ffc107;
+  }
+
+  [data-theme="dark"] .badge-approved {
+    background: #1b3d1b;
+    color: #81c784;
+  }
+
+  [data-theme="dark"] .badge-rejected {
+    background: #3d1a1a;
+    color: #ef5350;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+
+  .empty-state i {
+    display: block;
+    margin: 0 auto 0.5rem;
+    opacity: 0.4;
+  }
+
+  /* ── Botón flotante de acción ── */
+  .fab-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-fab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .btn-fab:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-fab-primary {
+    background: var(--blue-600);
+    color: #fff;
+  }
+
+  .btn-fab-primary:hover {
+    background: var(--blue-700);
+  }
+
+  .btn-fab-secondary {
+    background: var(--gold);
+    color: #fff;
+  }
+
+  .btn-fab-secondary:hover {
+    background: #c89e2f;
+  }
+
+  /* ── Móvil toggle sidebar ── */
+  .sidebar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      transform: translateX(-100%);
+      z-index: 1000;
+      width: 280px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+      display: block;
+    }
+
+    .main-content {
+      padding: 1rem;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .two-col {
+      grid-template-columns: 1fr;
+    }
+
+    .topbar-right .admin-user-badge strong {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Overlay para móvil */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  .overlay.active {
+    display: block;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrap">
+
+  <!-- Overlay (móvil) -->
+  <div id="sidebar-overlay" class="overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestión de Salas</small>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="active">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="/calendario">
+        <i data-lucide="calendar"></i> Calendario
+      </a>
+      <a href="/solicitudes">
+        <i data-lucide="clipboard-list"></i> Solicitudes
+      </a>
+      <a href="/eventos">
+        <i data-lucide="calendar-plus"></i> Eventos
+      </a>
+      <a href="/reportes">
+        <i data-lucide="bar-chart-2"></i> Reportes
+      </a>
+    </nav>
+
+
+    <div class="sidebar-footer">
+      <a href="/api/auth/logout" id="logout-link">
+        <i data-lucide="log-out"></i> Cerrar sesión
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Panel de Administración</h2>
+        <p>Bienvenido, <strong>admin@unison.mx</strong> · Hoy es <span id="dashboard-date"></span></p>
+      </div>
+      <div class="topbar-right">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
+        <!-- El tema se maneja desde base.html con su propio botón, así que no lo duplicamos -->
+      </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="fab-group">
+      <a class="btn-fab btn-fab-primary" href="/calendario">
+        <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Evento
+      </a>
+      <a class="btn-fab btn-fab-secondary" href="/solicitudes?new=1">
+        <i data-lucide="file-plus" class="w-4 h-4"></i> Nueva Solicitud
+      </a>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Eventos de hoy</div>
+        <div class="stat-number"><span class="highlight-blue" id="stat-events-today">0</span></div>
+        <div class="stat-sub" id="stat-events-today-sub">Sin eventos programados hoy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Solicitudes pendientes</div>
+        <div class="stat-number"><span class="highlight-gold" id="stat-pending-requests">0</span></div>
+        <div class="stat-sub" id="stat-pending-requests-sub">Sin solicitudes pendientes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Salas ocupadas ahora</div>
+        <div class="stat-number"><span class="highlight-green" id="stat-rooms-now">0</span> / 3</div>
+        <div class="stat-sub" id="stat-rooms-now-sub">Sin salas ocupadas ahora</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Eventos esta semana</div>
+        <div class="stat-number"><span class="highlight-red" id="stat-week-events">0</span></div>
+        <div class="stat-sub" id="stat-week-events-sub">Eventos activos de la semana</div>
+      </div>
+    </div>
+
+
+    <!-- Dos columnas: eventos próximos y solicitudes recientes -->
+    <div class="two-col">
+      <!-- Proximos eventos -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Proximos eventos</h3>
+          <a href="/eventos">Ver todos</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini" id="dashboard-events-table">
+            <tbody><tr><td class="empty-state">No hay eventos proximos registrados.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Solicitudes recientes -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Solicitudes recientes</h3>
+          <a href="/solicitudes">Ver todas</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini" id="dashboard-requests-table">
+            <tbody><tr><td class="empty-state">No hay solicitudes registradas.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- (Opcional) Más contenido, ejemplo: actividad reciente o gráfico -->
+    <div class="panel" style="margin-bottom: 2rem;">
+      <div class="panel-header">
+        <h3>Ocupacion de salas (hoy)</h3>
+        <a href="/calendario">Ver detalle</a>
+      </div>
+      <div class="panel-body" style="padding: 1.5rem;">
+        <div id="dashboard-occupancy" style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
+          <div class="empty-state">Sin eventos programados hoy.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Inicializar Lucide
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const dashboardDate = document.getElementById('dashboard-date');
+    if (dashboardDate) {
+      dashboardDate.textContent = new Date().toLocaleDateString('es-MX');
+    }
+
+    // Sidebar toggle en móvil
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (sidebar.classList.contains('open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+    }
+
+    overlay.addEventListener('click', closeSidebar);
+
+    // Cerrar sidebar al hacer click en un enlace (móvil)
+    document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
+      link.addEventListener('click', function () {
+        if (window.innerWidth <= 768) {
+          closeSidebar();
+        }
+      });
+    });
+
+    // Cerrar sesión: redirigir a login
+    document.getElementById('logout-link')?.addEventListener('click', function (e) {
+      e.preventDefault();
+      // Limpiar datos de sesión (simulado)
+      localStorage.removeItem('token'); // si se usa
+      window.location.href = '/api/auth/logout';
+    });
+
+    loadDashboardData();
+
+    async function loadDashboardData() {
+      try {
+        const [eventsResponse, requestsResponse] = await Promise.all([
+          fetch('/api/eventos/'),
+          fetch('/api/solicitudes/')
+        ]);
+        if (!eventsResponse.ok || !requestsResponse.ok) {
+          throw new Error('No se pudo cargar la informacion del dashboard.');
+        }
+        const events = await eventsResponse.json();
+        const requests = await requestsResponse.json();
+        renderDashboardStats(events, requests);
+        renderUpcomingEvents(events);
+        renderRecentRequests(requests);
+        renderOccupancy(events);
+      } catch (error) {
+        document.querySelector('#dashboard-events-table tbody').innerHTML = '<tr><td class="empty-state">No se pudieron cargar los eventos.</td></tr>';
+        document.querySelector('#dashboard-requests-table tbody').innerHTML = '<tr><td class="empty-state">No se pudieron cargar las solicitudes.</td></tr>';
+        document.getElementById('dashboard-occupancy').innerHTML = `<div class="empty-state">${escapeHTML(error.message)}</div>`;
+      }
+    }
+
+    function renderDashboardStats(events, requests) {
+      const today = localDateKey(new Date());
+      const nowMinutes = minutesFromDate(new Date());
+      const start = startOfWeek(new Date());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const activeEvents = events;
+      const eventsToday = activeEvents.filter(event => event.fecha === today);
+      const pendingRequests = requests.filter(request => request.estado === 'pendiente');
+      const weekEvents = activeEvents.filter(event => {
+        const date = parseDate(event.fecha);
+        return date >= start && date <= end;
+      });
+      const occupiedRooms = new Set();
+      eventsToday.forEach(event => {
+        if (minutesFromTime(event.hora_de_inicio) <= nowMinutes && minutesFromTime(event.hora_de_termino) > nowMinutes) {
+          (event.salas || []).forEach(sala => occupiedRooms.add(sala.numero_sala));
+        }
+      });
+
+      document.getElementById('stat-events-today').textContent = eventsToday.length;
+      document.getElementById('stat-events-today-sub').textContent = describeRooms(eventsToday);
+      document.getElementById('stat-pending-requests').textContent = pendingRequests.length;
+      document.getElementById('stat-pending-requests-sub').textContent = pendingRequests.length === 1 ? 'Requiere revision' : 'Requieren revision';
+      document.getElementById('stat-rooms-now').textContent = occupiedRooms.size;
+      document.getElementById('stat-rooms-now-sub').textContent = occupiedRooms.size ? `Sala ${Array.from(occupiedRooms).sort().join(', Sala ')} en uso` : 'Sin salas ocupadas ahora';
+      document.getElementById('stat-week-events').textContent = weekEvents.length;
+      document.getElementById('stat-week-events-sub').textContent = 'Eventos activos de la semana';
+    }
+
+    function renderUpcomingEvents(events) {
+      const tbody = document.querySelector('#dashboard-events-table tbody');
+      const nowKey = localDateKey(new Date());
+      const nowMinutes = minutesFromDate(new Date());
+      const upcoming = events
+        .filter(event => event.fecha > nowKey || (event.fecha === nowKey && minutesFromTime(event.hora_de_termino) >= nowMinutes))
+        .sort((a, b) => `${a.fecha} ${a.hora_de_inicio}`.localeCompare(`${b.fecha} ${b.hora_de_inicio}`))
+        .slice(0, 5);
+
+      if (!upcoming.length) {
+        tbody.innerHTML = '<tr><td class="empty-state">No hay eventos proximos registrados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = upcoming.map(event => {
+        const rooms = (event.salas || []).map(sala => `Sala ${sala.numero_sala}`).join(', ') || 'Sin sala';
+        return `
+          <tr>
+            <td>
+              <div class="event-title">${escapeHTML(event.titulo)}</div>
+              <div class="event-meta">${escapeHTML(rooms)} · ${formatDate(event.fecha)} · ${formatTime(event.hora_de_inicio)} - ${formatTime(event.hora_de_termino)}</div>
+            </td>
+            <td style="text-align:right;"></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderRecentRequests(requests) {
+      const tbody = document.querySelector('#dashboard-requests-table tbody');
+      const recent = requests.slice(0, 5);
+      if (!recent.length) {
+        tbody.innerHTML = '<tr><td class="empty-state">No hay solicitudes registradas.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = recent.map(request => {
+        const rooms = (request.salas || []).map(sala => `Sala ${sala.numero_sala}`).join(', ') || 'Sin sala';
+        const status = request.estado || 'pendiente';
+        return `
+          <tr>
+            <td>
+              <div class="event-title">${escapeHTML(request.evento_titulo || 'Sin evento')}</div>
+              <div class="event-meta">${escapeHTML(rooms)} · ${formatDate(request.evento_fecha)}</div>
+            </td>
+            <td style="text-align:right;"><span class="badge-status ${badgeClass(status)}">${escapeHTML(labelStatus(status))}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderOccupancy(events) {
+      const container = document.getElementById('dashboard-occupancy');
+      const today = localDateKey(new Date());
+      const totals = { 1: 0, 2: 0, 3: 0 };
+      events
+        .filter(event => event.fecha === today)
+        .forEach(event => {
+          const duration = Math.max(0, minutesFromTime(event.hora_de_termino) - minutesFromTime(event.hora_de_inicio)) / 60;
+          (event.salas || []).forEach(sala => {
+            totals[sala.numero_sala] = (totals[sala.numero_sala] || 0) + duration;
+          });
+        });
+
+      const colors = { 1: 'var(--blue-600)', 2: 'var(--green)', 3: 'var(--gold)' };
+      container.innerHTML = [1, 2, 3].map(room => {
+        const hours = totals[room] || 0;
+        const percent = Math.min(100, Math.round((hours / 12) * 100));
+        return `
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:${colors[room]};">Sala ${room}</div>
+            <div style="font-size:2rem; font-weight:800; color:${colors[room]};">${percent}%</div>
+            <div style="font-size:0.75rem; color:var(--muted);">${formatNumber(hours)} de 12 horas ocupadas</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function describeRooms(events) {
+      if (!events.length) return 'Sin eventos programados hoy';
+      const counts = { 1: 0, 2: 0, 3: 0 };
+      events.forEach(event => (event.salas || []).forEach(sala => { counts[sala.numero_sala] = (counts[sala.numero_sala] || 0) + 1; }));
+      return [1, 2, 3].map(room => `${counts[room] || 0} en Sala ${room}`).join(', ');
+    }
+
+    function badgeClass(status) {
+      if (status === 'programado' || status === 'aprobada') return 'badge-approved';
+      if (status === 'rechazada') return 'badge-rejected';
+      return 'badge-pending';
+    }
+
+    function labelStatus(status) {
+      const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
+      return labels[status] || status;
+    }
+
+    function parseDate(value) {
+      return new Date(`${value}T00:00:00`);
+    }
+
+    function localDateKey(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    function startOfWeek(date) {
+      const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const diff = (copy.getDay() + 6) % 7;
+      copy.setDate(copy.getDate() - diff);
+      return copy;
+    }
+
+    function minutesFromDate(date) {
+      return date.getHours() * 60 + date.getMinutes();
+    }
+
+    function minutesFromTime(value) {
+      const [hour, minute] = String(value || '00:00').split(':').map(Number);
+      return (hour || 0) * 60 + (minute || 0);
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Sin fecha';
+      return parseDate(value).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    }
+
+    function formatTime(value) {
+      return String(value || '').slice(0, 5);
+    }
+
+    function formatNumber(value) {
+      return Number.isInteger(value) ? value : value.toFixed(1);
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+  });
+</script>
+{% endblock %}
+
+
+

@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitudes - MODD{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <div id="sidebar-overlay" class="admin-overlay"></div>
+
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="admin-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/calendario"><i data-lucide="calendar"></i> Calendario</a>
+      <a href="/solicitudes" class="active"><i data-lucide="clipboard-list"></i> Solicitudes</a>
+      <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
+      <a href="/reportes"><i data-lucide="bar-chart-2"></i> Reportes</a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title">
+        <h2>Solicitudes</h2>
+        <p>Revision, aprobacion y seguimiento de solicitudes de sala.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <button class="admin-primary-button" id="new-request-btn" type="button">
+          <i data-lucide="file-plus" class="w-5 h-5"></i> Nueva solicitud
+        </button>
+        <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
+      </div>
+    </header>
+
+    <section class="admin-stat-grid" aria-label="Resumen de solicitudes">
+      <button class="admin-stat-card is-selected" data-status-card="todas" type="button">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Todas</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="pendiente" type="button" style="--stat-color:#8a6200">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Pendiente</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="aprobada" type="button" style="--stat-color:#176b2b">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Aprobada</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="rechazada" type="button" style="--stat-color:#9f1f1a">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Rechazada</div>
+      </button>
+    </section>
+
+    <section class="admin-filter-row" aria-label="Filtros de solicitudes">
+      <div class="admin-field-with-icon">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input id="request-search" type="search" placeholder="Buscar por nombre, correo o evento...">
+      </div>
+      <select id="request-status" class="admin-select" aria-label="Estado">
+        <option value="todas">Todos los estados</option>
+        <option value="pendiente">Pendientes</option>
+        <option value="aprobada">Aprobadas</option>
+        <option value="rechazada">Rechazadas</option>
+      </select>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="requests-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Solicitante</th>
+              <th>Evento</th>
+              <th>Requerimientos</th>
+              <th>Sala</th>
+              <th>Fecha / Hora</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+
+<div id="request-detail-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-request-modal-close></div>
+  <div class="modd-event-modal" aria-label="Detalle de solicitud">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Solicitud</p>
+        <h3 id="request-detail-title">Detalle de solicitud</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-request-modal-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="request-detail-grid" id="request-detail-content"></div>
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-secondary-action" data-request-modal-close>Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="request-create-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-request-create-close></div>
+  <form class="modd-event-modal" id="request-create-form" aria-label="Nueva solicitud">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Nueva solicitud</p>
+        <h3>Registrar solicitud de sala</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-request-create-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="modd-form-grid">
+      <label>
+        Nombre
+        <input name="solicitante_nombre" type="text" required placeholder="Ana">
+      </label>
+      <label>
+        Apellido
+        <input name="solicitante_apellido" type="text" required placeholder="Torres">
+      </label>
+      <label>
+        Correo
+        <input name="solicitante_correo" type="email" required placeholder="correo@unison.mx">
+      </label>
+      <label>
+        Telefono
+        <input name="solicitante_telefono" type="tel" placeholder="662 000 0000">
+      </label>
+      <label class="modd-form-span">
+        Evento
+        <input name="evento_titulo" type="text" required placeholder="Seminario de investigacion">
+      </label>
+      <label class="modd-form-span">
+        Descripcion
+        <textarea name="evento_descripcion" rows="3" placeholder="Detalles breves del evento"></textarea>
+      </label>
+      <label>
+        Fecha
+        <input name="evento_fecha" type="date" required>
+      </label>
+      <label>
+        Inicio
+        <select name="evento_inicio" required></select>
+      </label>
+      <label>
+        Fin
+        <select name="evento_fin" required></select>
+      </label>
+      <label>
+        Sala
+        <select name="sala_id" required>
+          <option value="1">Sala 1</option>
+          <option value="2">Sala 2</option>
+          <option value="3">Sala 3</option>
+        </select>
+      </label>
+      <label>
+        Asistentes
+        <input name="evento_asistentes" type="number" min="0" value="0">
+      </label>
+      <label class="modd-form-span">
+        Acomodo
+        <input name="acomodo" type="text" placeholder="Teatro, aula, herradura...">
+      </label>
+      <fieldset class="modd-form-span request-check-grid">
+        <legend>Requerimientos</legend>
+        <label class="modd-checkbox-card">
+          <input name="equipo_de_sonido" type="checkbox">
+          <span><i data-lucide="volume-2" class="w-4 h-4"></i> Equipo de sonido</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="cafeteria" type="checkbox">
+          <span><i data-lucide="coffee" class="w-4 h-4"></i> Cafeteria</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input name="videoconferencia" type="checkbox">
+          <span><i data-lucide="video" class="w-4 h-4"></i> Videoconferencia</span>
+        </label>
+      </fieldset>
+    </div>
+
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-secondary-action" data-request-create-close>Cancelar</button>
+      <button type="submit" class="modd-primary-action">Guardar solicitud</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
+    const search = document.getElementById('request-search');
+    const statusSelect = document.getElementById('request-status');
+    const tableBody = document.querySelector('#requests-table tbody');
+    const detailModal = document.getElementById('request-detail-modal');
+    const detailContent = document.getElementById('request-detail-content');
+    const createModal = document.getElementById('request-create-modal');
+    const createForm = document.getElementById('request-create-form');
+    const newRequestButton = document.getElementById('new-request-btn');
+    let rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
+    const cards = Array.from(document.querySelectorAll('[data-status-card]'));
+    let activeStatus = 'todas';
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    toggle?.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    });
+    overlay?.addEventListener('click', closeSidebar);
+
+    loadRequestsFromApi();
+    fillHourSelects();
+
+    function applyFilters() {
+      const term = (search.value || '').trim().toLowerCase();
+      rows.forEach(function (row) {
+        const statusMatch = activeStatus === 'todas' || row.dataset.status === activeStatus;
+        const searchMatch = !term || row.dataset.search.includes(term);
+        row.style.display = statusMatch && searchMatch ? '' : 'none';
+      });
+    }
+
+    cards.forEach(function (card) {
+      card.addEventListener('click', function () {
+        activeStatus = card.dataset.statusCard;
+        statusSelect.value = activeStatus;
+        cards.forEach(function (item) { item.classList.toggle('is-selected', item === card); });
+        applyFilters();
+      });
+    });
+
+    statusSelect.addEventListener('change', function () {
+      activeStatus = statusSelect.value;
+      cards.forEach(function (card) { card.classList.toggle('is-selected', card.dataset.statusCard === activeStatus); });
+      applyFilters();
+    });
+    search.addEventListener('input', applyFilters);
+    bindRequestActions();
+
+    document.querySelectorAll('[data-request-modal-close]').forEach(function (item) {
+      item.addEventListener('click', closeRequestDetail);
+    });
+
+    document.querySelectorAll('[data-request-create-close]').forEach(function (item) {
+      item.addEventListener('click', closeCreateRequest);
+    });
+    newRequestButton?.addEventListener('click', openCreateRequest);
+    createForm?.addEventListener('submit', submitCreateRequest);
+    if (new URLSearchParams(window.location.search).get('new') === '1') {
+      openCreateRequest();
+    }
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/api/auth/logout';
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById('page-toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2800);
+    }
+
+    function fillHourSelects() {
+      ['evento_inicio', 'evento_fin'].forEach(function (name) {
+        const select = createForm?.elements[name];
+        if (!select) return;
+        select.innerHTML = '';
+        for (let hour = 8; hour <= 20; hour += 1) {
+          const value = `${String(hour).padStart(2, '0')}:00`;
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        }
+      });
+      if (createForm?.elements.evento_inicio) createForm.elements.evento_inicio.value = '08:00';
+      if (createForm?.elements.evento_fin) createForm.elements.evento_fin.value = '09:00';
+    }
+
+    function openCreateRequest() {
+      createForm?.reset();
+      fillHourSelects();
+      if (createForm?.elements.evento_fecha) {
+        createForm.elements.evento_fecha.value = new Date().toISOString().slice(0, 10);
+      }
+      createModal.classList.remove('hidden');
+      createModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateRequest() {
+      createModal.classList.add('hidden');
+      createModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function submitCreateRequest(event) {
+      event.preventDefault();
+      const formData = new FormData(createForm);
+      const payload = {
+        solicitante_nombre: formData.get('solicitante_nombre'),
+        solicitante_apellido: formData.get('solicitante_apellido'),
+        solicitante_correo: formData.get('solicitante_correo'),
+        solicitante_telefono: formData.get('solicitante_telefono') || null,
+        evento_titulo: formData.get('evento_titulo'),
+        evento_descripcion: formData.get('evento_descripcion') || null,
+        evento_fecha: formData.get('evento_fecha'),
+        evento_inicio: `${formData.get('evento_inicio')}:00`,
+        evento_fin: `${formData.get('evento_fin')}:00`,
+        evento_asistentes: Number(formData.get('evento_asistentes') || 0),
+        sala_id: Number(formData.get('sala_id')),
+        acomodo: formData.get('acomodo') || null,
+        equipo_de_sonido: Boolean(formData.get('equipo_de_sonido')),
+        cafeteria: Boolean(formData.get('cafeteria')),
+        videoconferencia: Boolean(formData.get('videoconferencia'))
+      };
+
+      try {
+        const response = await fetch('/api/solicitudes/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(function () { return {}; });
+          throw new Error(error.detail || 'No se pudo crear la solicitud.');
+        }
+        closeCreateRequest();
+        await loadRequestsFromApi();
+        showToast('Solicitud creada correctamente.');
+        if (window.location.search.includes('new=1')) {
+          window.history.replaceState({}, '', '/solicitudes');
+        }
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function loadRequestsFromApi() {
+      tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
+      rows = [];
+      try {
+        const response = await fetch('/api/solicitudes/');
+        if (!response.ok) throw new Error('No se pudieron cargar solicitudes.');
+        const requests = await response.json();
+        if (!requests.length) {
+          tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
+          rows = [];
+          updateStats();
+          return;
+        }
+
+        tableBody.innerHTML = requests.map(function (item) {
+          const estado = item.estado || 'pendiente';
+          const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
+          const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
+          const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
+          const requerimientos = formatRequirements(item);
+          const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
+          const action = estado === 'pendiente'
+            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>'
+            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+
+          return `
+            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}">
+              <td class="admin-muted">${item.id_solicitud}</td>
+              <td><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
+              <td><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
+              <td>${escapeHTML(requerimientos)}</td>
+              <td>${escapeHTML(salas)}</td>
+              <td><div>${escapeHTML(fecha)}</div><div class="admin-muted">${escapeHTML(horario)}</div></td>
+              <td><span class="status-pill ${estado}">${escapeHTML(capitalize(estado))}</span></td>
+              <td><div class="admin-action-row">${action}</div></td>
+            </tr>
+          `;
+        }).join('');
+
+        rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
+        bindRequestActions();
+        updateStats();
+        applyFilters();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function bindRequestActions() {
+      document.querySelectorAll('[data-action]').forEach(function (button) {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+        button.addEventListener('click', async function () {
+          const row = button.closest('tr');
+          if (button.dataset.action === 'delete') {
+            const confirmed = window.confirm('Eliminar esta solicitud definitivamente?');
+            if (!confirmed) return;
+            try {
+              const response = await fetch(`/api/solicitudes/${row.dataset.id}`, { method: 'DELETE' });
+              if (!response.ok) throw new Error('No se pudo eliminar la solicitud.');
+              row.remove();
+              rows = rows.filter(function (item) { return item !== row; });
+              updateStats();
+              applyFilters();
+              showToast('Solicitud eliminada correctamente.');
+            } catch (error) {
+              showToast(error.message);
+            }
+            return;
+          }
+          if (button.dataset.action === 'view' || button.dataset.action === 'edit') {
+            openRequestDetail(row);
+            return;
+          }
+          const nextStatus = button.dataset.action === 'approve' ? 'aprobada' : 'rechazada';
+          if (!row.dataset.id) {
+            row.dataset.status = nextStatus;
+            row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
+            row.querySelector('.status-pill').textContent = capitalize(nextStatus);
+            updateStats();
+            applyFilters();
+            showToast('Solicitud actualizada visualmente.');
+            return;
+          }
+          try {
+            const response = await fetch(`/api/solicitudes/${row.dataset.id}/estado`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ estado: nextStatus })
+            });
+            if (!response.ok) throw new Error('No se pudo actualizar la solicitud.');
+            row.dataset.status = nextStatus;
+            row.querySelector('.status-pill').className = `status-pill ${nextStatus}`;
+            row.querySelector('.status-pill').textContent = capitalize(nextStatus);
+            row.querySelector('.admin-action-row').innerHTML = '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+            bindRequestActions();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            updateStats();
+            applyFilters();
+            showToast('Solicitud actualizada correctamente.');
+          } catch (error) {
+            showToast(error.message);
+          }
+        });
+      });
+    }
+
+    function updateStats() {
+      const counts = { todas: rows.length, pendiente: 0, aprobada: 0, rechazada: 0 };
+      rows.forEach(function (row) { counts[row.dataset.status] = (counts[row.dataset.status] || 0) + 1; });
+      cards.forEach(function (card) {
+        card.querySelector('.admin-stat-value').textContent = counts[card.dataset.statusCard] || 0;
+      });
+    }
+
+    function openRequestDetail(row) {
+      const cells = Array.from(row.children).map(function (cell) { return cell.innerText.trim(); });
+      document.getElementById('request-detail-title').textContent = `Solicitud ${cells[0] || ''}`;
+      detailContent.innerHTML = `
+        <div><span>ID</span><strong>${escapeHTML(cells[0] || '')}</strong></div>
+        <div><span>Solicitante</span><strong>${escapeHTML(cells[1] || '')}</strong></div>
+        <div><span>Evento</span><strong>${escapeHTML(cells[2] || '')}</strong></div>
+        <div><span>Requerimientos</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
+        <div><span>Sala</span><strong>${escapeHTML(cells[4] || '')}</strong></div>
+        <div><span>Fecha / Hora</span><strong>${escapeHTML(cells[5] || '')}</strong></div>
+        <div><span>Estado</span><strong>${escapeHTML(cells[6] || '')}</strong></div>
+      `;
+      detailModal.classList.remove('hidden');
+      detailModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeRequestDetail() {
+      detailModal.classList.add('hidden');
+      detailModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function capitalize(value) {
+      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+    }
+
+    function formatRequirements(item) {
+      const values = [];
+      if (item.acomodo) values.push('Acomodo: ' + item.acomodo);
+      if (item.equipo_de_sonido) values.push('Equipo de sonido');
+      if (item.cafeteria) values.push('Cafeteria');
+      if (item.videoconferencia) values.push('Videoconferencia');
+      return values.join(', ') || 'Sin requerimientos';
+    }
+
+    function escapeHTML(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHTML(value).replaceAll('`', '&#096;');
+    }
+  });
+</script>
+{% endblock %}
+

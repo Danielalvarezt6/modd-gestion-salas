@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - MODD{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <div id="sidebar-overlay" class="admin-overlay"></div>
+
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="admin-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/calendario"><i data-lucide="calendar"></i> Calendario</a>
+      <a href="/solicitudes"><i data-lucide="clipboard-list"></i> Solicitudes</a>
+      <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
+      <a href="/reportes" class="active"><i data-lucide="bar-chart-2"></i> Reportes</a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title">
+        <h2>Generar Reportes PDF</h2>
+        <p>Exporta informacion de eventos, solicitudes y uso de salas.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
+      </div>
+    </header>
+
+    <section class="admin-hero-card">
+      <h3>Exportar informacion de salas</h3>
+      <p>Genera archivos PDF con historial, ocupacion, asistentes, responsables y requerimientos de cada evento.</p>
+    </section>
+
+    <section class="report-grid" id="report-grid">
+      <article class="report-card" data-search="semanal eventos semana requisitos asistentes">
+        <div class="report-icon" style="--report-bg:rgba(36,57,138,.1);--report-color:#24398A">
+          <i data-lucide="file-text" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Semanal</h3>
+          <p>Eventos de la semana actual con detalle de requisitos y asistentes.</p>
+          <button class="admin-primary-button mt-4" data-report-type="semanal" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="mensual historial mes uso salas solicitantes estadisticas">
+        <div class="report-icon" style="--report-bg:rgba(92,168,71,.12);--report-color:#176b2b">
+          <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Mensual</h3>
+          <p>Historial del mes: uso de salas, solicitantes y estadisticas.</p>
+          <button class="admin-primary-button mt-4" data-report-type="mensual" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="informe por sala actividad sala periodo">
+        <div class="report-icon" style="--report-bg:rgba(148,103,33,.13);--report-color:#946721">
+          <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Informe por Sala</h3>
+          <p>Actividad detallada de una sala especifica. Puedes combinarlo con las fechas de abajo.</p>
+          <label class="report-inline-field">
+            Sala
+            <select class="admin-select" id="single-room-report">
+              <option value="">Selecciona una sala</option>
+              <option value="1">Sala 1</option>
+              <option value="2">Sala 2</option>
+              <option value="3">Sala 3</option>
+            </select>
+          </label>
+          <button class="admin-primary-button mt-4" data-report-type="sala" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="personalizado rango fechas salas reporte filtros">
+        <div class="report-icon" style="--report-bg:rgba(225,183,61,.17);--report-color:#8a6200">
+          <i data-lucide="file-cog" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Personalizado</h3>
+          <p>Define rango de fechas y sala en los filtros de abajo para exportar.</p>
+          <button class="admin-primary-button mt-4" data-report-type="personalizado" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <section class="filter-panel">
+      <h3>Reporte personalizado</h3>
+      <div class="filter-grid">
+        <label>
+          Fecha inicio
+          <input class="admin-input" type="date" id="start-date">
+        </label>
+        <label>
+          Fecha fin
+          <input class="admin-input" type="date" id="end-date">
+        </label>
+        <label>
+          Sala
+          <select class="admin-select" id="report-room">
+            <option value="">Todas las salas</option>
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
+          </select>
+        </label>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
+    const cards = Array.from(document.querySelectorAll('.report-card'));
+    let reportData = null;
+
+    toggle?.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    });
+    overlay?.addEventListener('click', function () {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+
+    loadReportSummary();
+
+    document.querySelectorAll('[data-report-type], #export-filters').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const type = button.dataset.reportType || 'personalizado';
+        downloadPdfReport(type);
+      });
+    });
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/api/auth/logout';
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById('page-toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2800);
+    }
+
+    function downloadPdfReport(type) {
+      const params = new URLSearchParams();
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const room = type === 'sala'
+        ? document.getElementById('single-room-report').value
+        : document.getElementById('report-room').value;
+      params.set('tipo', type);
+      if ((type === 'personalizado' || type === 'sala') && startDate) params.set('fecha_inicio', startDate);
+      if ((type === 'personalizado' || type === 'sala') && endDate) params.set('fecha_fin', endDate);
+      if ((type === 'personalizado' || type === 'sala') && room) params.set('sala', room);
+      if (type === 'sala' && !room) {
+        showToast('Selecciona una sala para generar el informe por sala.');
+        return;
+      }
+
+      window.location.href = '/api/reportes/pdf?' + params.toString();
+      showToast('Descargando PDF...');
+    }
+
+    async function loadReportSummary() {
+      const params = new URLSearchParams();
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const room = document.getElementById('report-room').value;
+      if (startDate) params.set('fecha_inicio', startDate);
+      if (endDate) params.set('fecha_fin', endDate);
+      if (room) params.set('sala', room);
+
+      try {
+        const response = await fetch('/api/reportes/resumen?' + params.toString());
+        if (!response.ok) throw new Error('No se pudo cargar el resumen de reportes.');
+        reportData = await response.json();
+        return reportData;
+      } catch (error) {
+        showToast(error.message);
+        reportData = null;
+        return null;
+      }
+    }
+
+  });
+</script>
+{% endblock %}

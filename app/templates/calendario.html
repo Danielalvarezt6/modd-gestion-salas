@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario - MODD{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --blue-600: #24398A;
+    --blue-700: #1c2d6e;
+    --blue-50: #f0f3fc;
+    --blue-100: #dce3f7;
+    --gold: #E1B73D;
+    --green: #5CA847;
+    --red: #D5433C;
+    --red-light: #fef0f0;
+    --border: #e5e9f2;
+    --text: #1a2340;
+    --muted: #6b7a99;
+    --surface: #ffffff;
+    --bg: #f7f8fc;
+  }
+
+  [data-theme="dark"] {
+    --blue-600: #8da8ff;
+    --blue-700: #6f8be8;
+    --blue-50: rgba(91, 123, 214, 0.16);
+    --blue-100: #252d4d;
+    --gold: #f4cd56;
+    --green: #85d17b;
+    --red: #ff7770;
+    --red-light: rgba(213, 67, 60, 0.16);
+    --border: #30384d;
+    --text: #f3f6ff;
+    --muted: #b7c0d6;
+    --surface: #1b2030;
+    --bg: #11131a;
+  }
+
+  .page-shell {
+    background: var(--bg);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .app-sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1.5rem 1rem;
+    position: sticky;
+    top: 0;
+    transition: transform 0.3s ease;
+    width: 260px;
+  }
+
+  .sidebar-brand {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .sidebar-brand img {
+    height: 2.5rem;
+    object-fit: contain;
+    width: 2.5rem;
+  }
+
+  .sidebar-brand h1 {
+    color: var(--blue-600);
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0;
+  }
+
+  .sidebar-brand small {
+    color: var(--muted);
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-top: -2px;
+    text-transform: uppercase;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sidebar-nav a,
+  .sidebar-footer a {
+    align-items: center;
+    border-radius: 0.5rem;
+    color: var(--muted);
+    display: flex;
+    font-size: 0.875rem;
+    font-weight: 600;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    text-decoration: none;
+  }
+
+  .sidebar-nav a:hover,
+  .sidebar-nav a.active {
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+
+  .sidebar-nav a i,
+  .sidebar-footer a i {
+    flex-shrink: 0;
+    height: 1.25rem;
+    width: 1.25rem;
+  }
+
+  .sidebar-divider {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+
+  .sidebar-footer a:hover {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  .page-main {
+    flex: 1;
+    overflow-x: hidden;
+    padding: 2rem 2rem 2rem 2.5rem;
+  }
+
+  .topbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .topbar h2 {
+    color: var(--text);
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+  }
+
+  .topbar p {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0;
+  }
+
+  .topbar-right {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+  }
+
+  .sidebar-toggle {
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    cursor: pointer;
+    display: none;
+  }
+
+  .overlay {
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    inset: 0;
+    position: fixed;
+    z-index: 999;
+  }
+
+  .overlay.active {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .app-sidebar {
+      bottom: 0;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+      left: 0;
+      position: fixed;
+      top: 0;
+      transform: translateX(-100%);
+      width: 280px;
+      z-index: 1000;
+    }
+
+    .app-sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+      display: inline-flex;
+    }
+
+    .page-main {
+      padding: 1rem;
+    }
+
+    .admin-user-badge strong {
+      display: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+  <div id="sidebar-overlay" class="overlay"></div>
+
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="/calendario" class="active">
+        <i data-lucide="calendar"></i> Calendario
+      </a>
+      <a href="/solicitudes">
+        <i data-lucide="clipboard-list"></i> Solicitudes
+      </a>
+      <a href="/eventos">
+        <i data-lucide="calendar-plus"></i> Eventos
+      </a>
+      <a href="/reportes">
+        <i data-lucide="bar-chart-2"></i> Reportes
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="/api/auth/logout" id="logout-link">
+        <i data-lucide="log-out"></i> Cerrar sesion
+      </a>
+    </div>
+  </aside>
+
+  <main class="page-main">
+    <div class="topbar">
+      <div>
+        <h2>Calendario</h2>
+        <p>Gestion semanal, mensual y diaria de las tres salas interactivas.</p>
+      </div>
+      <div class="topbar-right">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
+      </div>
+    </div>
+
+    <section id="calendar-section" class="modd-calendar-shell" aria-label="Calendario interactivo de salas">
+      <div class="modd-calendar-header">
+        <div>
+          <p class="modd-section-kicker">Calendario</p>
+          <h3>Programacion semanal de salas</h3>
+          <p>Arrastra eventos para cambiar horario, dia o sala. Extiende el borde derecho para ocupar mas salas.</p>
+        </div>
+        <button class="modd-primary-action" id="calendar-new-event" type="button">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Nuevo evento
+        </button>
+      </div>
+
+      <div class="modd-calendar-toolbar" role="toolbar" aria-label="Controles del calendario">
+        <div class="modd-search-field">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <input id="calendar-search" type="search" placeholder="Buscar evento o responsable" autocomplete="off">
+        </div>
+
+        <div class="modd-room-filters" aria-label="Filtrar por sala">
+          <label class="modd-room-chip sala1">
+            <input type="checkbox" value="sala1" checked>
+            <span>Sala 1</span>
+          </label>
+          <label class="modd-room-chip sala2">
+            <input type="checkbox" value="sala2" checked>
+            <span>Sala 2</span>
+          </label>
+          <label class="modd-room-chip sala3">
+            <input type="checkbox" value="sala3" checked>
+            <span>Sala 3</span>
+          </label>
+        </div>
+
+        <div class="modd-view-switcher" aria-label="Cambiar vista">
+          <button type="button" class="active" data-calendar-view="week">Semana</button>
+          <button type="button" data-calendar-view="month">Mes</button>
+          <button type="button" data-calendar-view="day">Dia</button>
+        </div>
+      </div>
+
+      <div class="modd-calendar-legends">
+        <div class="modd-legend-group">
+          <span><i class="legend-dot sala1"></i>Sala 1</span>
+          <span><i class="legend-dot sala2"></i>Sala 2</span>
+          <span><i class="legend-dot sala3"></i>Sala 3</span>
+        </div>
+      </div>
+
+      <div id="calendar-alert" class="modd-calendar-alert" role="status" aria-live="polite"></div>
+
+      <div id="week-calendar-view" class="modd-week-calendar">
+        <div id="week-calendar-grid" class="modd-week-grid" aria-label="Vista semanal por sala"></div>
+      </div>
+
+      <div id="fullcalendar-view" class="modd-fullcalendar-wrap hidden">
+        <div id="modd-fullcalendar"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="event-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-modal-close></div>
+  <form id="event-form" class="modd-event-modal" aria-label="Formulario de evento">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Evento</p>
+        <h3 id="event-modal-title">Nuevo evento</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-modal-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div id="event-modal-alert" class="modd-modal-alert" role="alert" aria-live="assertive"></div>
+
+    <input type="hidden" id="event-id">
+    <div class="modd-form-grid">
+      <label>
+        <span>Nombre</span>
+        <input id="request-first-name" type="text" required placeholder="Nombre del solicitante">
+      </label>
+      <label>
+        <span>Apellido</span>
+        <input id="request-last-name" type="text" required placeholder="Apellido del solicitante">
+      </label>
+      <label>
+        <span>Correo</span>
+        <input id="request-email" type="email" required placeholder="correo@unison.mx">
+      </label>
+      <label>
+        <span>Telefono</span>
+        <input id="request-phone" type="tel" placeholder="662 000 0000">
+      </label>
+      <label class="modd-form-span">
+        <span>Nombre del evento</span>
+        <input id="event-title" type="text" required placeholder="Ej. Taller de innovacion">
+      </label>
+      <label>
+        <span>Fecha</span>
+        <input id="event-date" type="date" required>
+      </label>
+      <label>
+        <span>Inicio</span>
+        <input id="event-start" type="time" min="08:00" max="18:00" step="3600" required>
+      </label>
+      <label>
+        <span>Fin</span>
+        <input id="event-end" type="time" min="08:00" max="18:00" step="3600" required>
+      </label>
+      <label>
+        <span>Sala</span>
+        <select id="event-room-single" required>
+          <option value="1">Sala 1</option>
+          <option value="2">Sala 2</option>
+          <option value="3">Sala 3</option>
+        </select>
+      </label>
+      <label>
+        <span>Asistentes</span>
+        <input id="event-attendees" type="number" min="0" value="0">
+      </label>
+      <label class="modd-form-span">
+        <span>Acomodo</span>
+        <input id="event-layout" type="text" placeholder="Teatro, aula, herradura...">
+      </label>
+    </div>
+
+    <fieldset class="request-check-grid mt-4">
+      <legend>Requerimientos</legend>
+      <label class="modd-checkbox-card">
+        <input id="event-audio" type="checkbox">
+        <span><i data-lucide="volume-2" class="w-4 h-4"></i> Equipo de sonido</span>
+      </label>
+      <label class="modd-checkbox-card">
+        <input id="event-catering" type="checkbox">
+        <span><i data-lucide="coffee" class="w-4 h-4"></i> Cafeteria</span>
+      </label>
+      <label class="modd-checkbox-card">
+        <input id="event-video" type="checkbox">
+        <span><i data-lucide="video" class="w-4 h-4"></i> Videoconferencia</span>
+      </label>
+    </fieldset>
+
+    <label class="modd-notes-field">
+      <span>Descripcion</span>
+      <textarea id="event-notes" rows="3" placeholder="Detalles breves del evento"></textarea>
+    </label>
+
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-danger-action hidden" id="event-delete-button">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+        Eliminar evento
+      </button>
+      <span class="modd-modal-action-spacer"></span>
+      <button type="button" class="modd-secondary-action" data-modal-close>Cancelar</button>
+      <button type="submit" class="modd-primary-action">Guardar evento</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="/static/js/dashboard-calendar.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    toggleBtn?.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    overlay?.addEventListener('click', closeSidebar);
+
+    document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (window.innerWidth <= 768) closeSidebar();
+      });
+    });
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/api/auth/logout';
+    });
+  });
+</script>
+{% endblock %}

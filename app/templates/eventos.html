@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Eventos - MODD{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <div id="sidebar-overlay" class="admin-overlay"></div>
+
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="admin-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/calendario"><i data-lucide="calendar"></i> Calendario</a>
+      <a href="/solicitudes"><i data-lucide="clipboard-list"></i> Solicitudes</a>
+      <a href="/eventos" class="active"><i data-lucide="calendar-plus"></i> Eventos</a>
+      <a href="/reportes"><i data-lucide="bar-chart-2"></i> Reportes</a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/api/auth/logout" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title">
+        <h2>Eventos</h2>
+        <p>Listado completo de eventos confirmados y mantenimiento de salas.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <button class="admin-primary-button" id="new-event-btn" type="button">
+          <i data-lucide="plus" class="w-4 h-4"></i> Nuevo evento
+        </button>
+        <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-user-badge"><span>AU</span><strong>Administrador</strong></div>
+      </div>
+    </header>
+
+    <section class="admin-stat-grid" aria-label="Resumen de eventos">
+      <div class="admin-stat-card"><div class="admin-stat-value">0</div><div class="admin-stat-label">Total eventos</div></div>
+      <div class="admin-stat-card" style="--stat-color:#8a6200"><div class="admin-stat-value">0</div><div class="admin-stat-label">Esta semana</div></div>
+    </section>
+
+    <section class="admin-filter-row" aria-label="Filtros de eventos">
+      <div class="admin-field-with-icon">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input id="event-search" type="search" placeholder="Buscar evento o responsable...">
+      </div>
+      <select id="room-filter" class="admin-select" aria-label="Sala">
+        <option value="todas">Todas las salas</option>
+        <option value="sala1">Sala 1</option>
+        <option value="sala2">Sala 2</option>
+        <option value="sala3">Sala 3</option>
+      </select>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="events-table">
+          <thead>
+            <tr>
+              <th>Evento</th>
+              <th>Responsable</th>
+              <th>Sala</th>
+              <th>Dia</th>
+              <th>Horario</th>
+              <th>Asistentes</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+
+<div id="event-detail-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-event-modal-close></div>
+  <form id="event-detail-form" class="modd-event-modal" aria-label="Detalle de evento">
+    <div class="modd-modal-header">
+      <div>
+        <p class="modd-section-kicker">Evento</p>
+        <h3 id="event-detail-title">Detalle de evento</h3>
+      </div>
+      <button type="button" class="modd-icon-button" data-event-modal-close aria-label="Cerrar modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="modd-form-grid">
+      <label>
+        <span>Evento</span>
+        <input id="detail-event-name" type="text">
+      </label>
+      <label>
+        <span>Responsable</span>
+        <input id="detail-responsible" type="text">
+      </label>
+      <label>
+        <span>Sala</span>
+        <input id="detail-room" type="text">
+      </label>
+      <label>
+        <span>Dia</span>
+        <input id="detail-day" type="text">
+      </label>
+      <label>
+        <span>Horario</span>
+        <input id="detail-time" type="text">
+      </label>
+      <label>
+        <span>Asistentes</span>
+        <input id="detail-attendees" type="number" min="0">
+      </label>
+      <label>
+        <span>Acomodo</span>
+        <input id="detail-layout" type="text" readonly>
+      </label>
+      <label>
+        <span>Requerimientos</span>
+        <input id="detail-requirements" type="text" readonly>
+      </label>
+    </div>
+
+    <div class="modd-modal-actions">
+      <button type="button" class="modd-secondary-action" data-event-modal-close>Cerrar</button>
+      <button type="submit" class="modd-primary-action" id="event-detail-save">Guardar cambios visuales</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
+    const search = document.getElementById('event-search');
+    const room = document.getElementById('room-filter');
+    const tableBody = document.querySelector('#events-table tbody');
+    let rows = Array.from(document.querySelectorAll('#events-table tbody tr'));
+
+    toggle?.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    });
+    overlay?.addEventListener('click', function () {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+
+    function applyFilters() {
+      const term = (search.value || '').trim().toLowerCase();
+      rows.forEach(function (row) {
+        const roomMatch = room.value === 'todas' || row.dataset.room === room.value;
+        const searchMatch = !term || row.dataset.search.includes(term);
+        row.style.display = roomMatch && searchMatch ? '' : 'none';
+      });
+    }
+
+    loadEventsFromApi();
+
+    [search, room].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
+    const modal = document.getElementById('event-detail-modal');
+    const detailForm = document.getElementById('event-detail-form');
+    let activeRow = null;
+
+    document.getElementById('new-event-btn')?.addEventListener('click', function () {
+      window.location.href = '/calendario';
+    });
+
+    bindEventActions();
+
+    document.querySelectorAll('[data-event-modal-close]').forEach(function (item) {
+      item.addEventListener('click', closeEventDetail);
+    });
+
+    detailForm?.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (!activeRow) return;
+
+      if (activeRow.dataset.id) {
+        try {
+          const response = await fetch(`/api/eventos/${activeRow.dataset.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              titulo: document.getElementById('detail-event-name').value,
+              descripcion: activeRow.querySelector('.event-name-line .admin-muted')?.textContent || '',
+              fecha: activeRow.dataset.date,
+              hora_de_inicio: activeRow.dataset.start,
+              hora_de_termino: activeRow.dataset.end,
+              no_de_asistentes: Number(document.getElementById('detail-attendees').value || 0),
+              salas_ids: [Number(document.getElementById('detail-room').value.replace(/[^0-9]/g, '') || 1)]
+            })
+          });
+          if (!response.ok) throw new Error('No se pudo guardar el evento.');
+        } catch (error) {
+          showToast(error.message);
+          return;
+        }
+      }
+
+      activeRow.querySelector('.admin-strong').textContent = document.getElementById('detail-event-name').value;
+      activeRow.children[1].textContent = document.getElementById('detail-responsible').value;
+      activeRow.children[2].querySelector('.room-pill').textContent = document.getElementById('detail-room').value;
+      activeRow.children[3].textContent = document.getElementById('detail-day').value;
+      activeRow.children[4].textContent = document.getElementById('detail-time').value;
+      activeRow.children[5].textContent = document.getElementById('detail-attendees').value;
+      activeRow.dataset.search = activeRow.textContent.trim().toLowerCase();
+
+      closeEventDetail();
+      applyFilters();
+      showToast(activeRow.dataset.id ? 'Evento actualizado en la base de datos.' : 'Cambios actualizados en la tabla.');
+    });
+
+    function openEventDetail(row, editable) {
+      activeRow = row;
+      document.getElementById('event-detail-title').textContent = editable ? 'Editar evento' : 'Detalle de evento';
+      document.getElementById('detail-event-name').value = row.querySelector('.admin-strong').textContent.trim();
+      document.getElementById('detail-responsible').value = row.children[1].textContent.trim();
+      document.getElementById('detail-room').value = row.children[2].textContent.trim();
+      document.getElementById('detail-day').value = row.children[3].textContent.trim();
+      document.getElementById('detail-time').value = row.children[4].textContent.trim();
+      document.getElementById('detail-attendees').value = row.children[5].textContent.trim();
+      document.getElementById('detail-layout').value = row.dataset.layout || 'Sin acomodo';
+      document.getElementById('detail-requirements').value = row.dataset.requirements || 'Sin requerimientos';
+
+      detailForm.querySelectorAll('input').forEach(function (input) {
+        input.readOnly = !editable;
+      });
+      document.getElementById('event-detail-save').style.display = editable ? '' : 'none';
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeEventDetail() {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function loadEventsFromApi() {
+      tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>';
+      rows = [];
+      try {
+        const response = await fetch('/api/eventos/');
+        if (!response.ok) throw new Error('No se pudieron cargar eventos.');
+        const events = await response.json();
+        if (!events.length) {
+          tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados. Crea uno desde el calendario con el boton Nuevo evento.</td></tr>';
+          rows = [];
+          updateEventStats([]);
+          return;
+        }
+
+        tableBody.innerHTML = events.map(function (item) {
+          const roomNames = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
+          const roomKey = item.salas[0] ? 'sala' + item.salas[0].numero_sala : 'sala1';
+          const requester = item.solicitud?.solicitante || {};
+          const responsible = [requester.nombre, requester.apellido].filter(Boolean).join(' ') || 'Solicitante no asignado';
+
+          const searchText = [item.titulo, item.descripcion, responsible, roomNames].join(' ').toLowerCase();
+
+          return `
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
+              <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
+              <td>${escapeHTML(responsible)}</td>
+              <td><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
+              <td>${formatDate(item.fecha)}</td>
+              <td class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
+              <td>${item.no_de_asistentes || 0}</td>
+              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
+            </tr>
+          `;
+        }).join('');
+        rows = Array.from(document.querySelectorAll('#events-table tbody tr'));
+        updateEventStats(events);
+        bindEventActions();
+        applyFilters();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function bindEventActions() {
+      document.querySelectorAll('#events-table [data-action]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          const row = button.closest('tr');
+          const isEdit = button.getAttribute('aria-label') === 'Editar';
+          openEventDetail(row, isEdit);
+        });
+      });
+    }
+
+    function updateEventStats(events) {
+      const values = document.querySelectorAll('.admin-stat-card .admin-stat-value');
+      if (!values.length) return;
+      const today = new Date();
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      values[0].textContent = events.length;
+      values[1].textContent = events.filter((event) => {
+        const date = new Date(event.fecha + 'T00:00:00');
+        return date >= weekStart && date < weekEnd;
+      }).length;
+    }
+
+    function requirementsLayout(item) {
+      return item.requerimientos?.acomodo || 'Sin acomodo';
+    }
+
+    function requirementsText(item) {
+      const req = item.requerimientos || {};
+      const values = [];
+      if (req.equipo_de_sonido) values.push('Equipo de sonido');
+      if (req.cafeteria) values.push('Cafeteria');
+      if (req.videoconferencia) values.push('Videoconferencia');
+      return values.join(', ') || 'Sin requerimientos';
+    }
+
+    function formatDate(value) {
+      return new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' });
+    }
+
+    function escapeHTML(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHTML(value).replaceAll('`', '&#096;');
+    }
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/api/auth/logout';
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById('page-toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2800);
+    }
+  });
+</script>
+{% endblock %}
+
+
