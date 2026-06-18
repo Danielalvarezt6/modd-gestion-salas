@@ -16,7 +16,7 @@ async def obtener_eventos(db: Session = Depends(get_db)):
     return eventos
 
 
-@router.post("/", response_model=EventoOut, status_code=status.HTTP_21_CREATED)
+@router.post("/", response_model=EventoOut, status_code=status.HTTP_201_CREATED)
 async def crear_evento(evento: EventoCreate, db: Session = Depends(get_db)):
     nuevo_evento = Evento(
         titulo=evento.titulo,

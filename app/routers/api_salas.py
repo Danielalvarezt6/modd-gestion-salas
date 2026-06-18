@@ -19,7 +19,7 @@ async def obtener_salas(db: Session = Depends(get_db)):
 
 
 # 2. Endpoint para CREAR una nueva sala (Útil si tienes un panel de admin)
-@router.post("/", response_model=SalaOut, status_code=status.HTTP_21_CREATED)
+@router.post("/", response_model=SalaOut, status_code=status.HTTP_201_CREATED)
 async def crear_sala(sala: SalaBase, db: Session = Depends(get_db)):
     stmt = select(Sala).where(Sala.numero_sala == sala.numero_sala)
     sala_existente = db.execute(stmt).scalars().first()
