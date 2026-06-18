@@ -51,10 +51,7 @@
     </header>
 
     <section class="admin-stat-grid" aria-label="Resumen de eventos">
-      <div class="admin-stat-card"><div class="admin-stat-value">12</div><div class="admin-stat-label">Total eventos</div></div>
-      <div class="admin-stat-card" style="--stat-color:#176b2b"><div class="admin-stat-value">11</div><div class="admin-stat-label">Confirmados</div></div>
-      <div class="admin-stat-card" style="--stat-color:#6b7a99"><div class="admin-stat-value">1</div><div class="admin-stat-label">Mantenimiento</div></div>
-      <div class="admin-stat-card" style="--stat-color:#8a6200"><div class="admin-stat-value">12</div><div class="admin-stat-label">Esta semana</div></div>
+      <div class="admin-stat-card"><div class="admin-stat-value">{{ stat_total }}</div><div class="admin-stat-label">Total eventos</div></div>
     </section>
 
     <section class="admin-filter-row" aria-label="Filtros de eventos">
@@ -68,14 +65,6 @@
         <option value="sala2">Sala 2</option>
         <option value="sala3">Sala 3</option>
       </select>
-      <select id="type-filter" class="admin-select" aria-label="Tipo">
-        <option value="todos">Todos los tipos</option>
-        <option value="clase">Clase</option>
-        <option value="taller">Taller</option>
-        <option value="reunion">Reunion</option>
-        <option value="mantenimiento">Mantenimiento</option>
-        <option value="conferencia">Conferencia</option>
-      </select>
     </section>
 
     <section class="admin-panel">
@@ -86,92 +75,53 @@
               <th>Evento</th>
               <th>Responsable</th>
               <th>Sala</th>
-              <th>Dia</th>
+              <th>Día</th>
               <th>Horario</th>
               <th>Asistentes</th>
-              <th>Tipo</th>
-              <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr data-room="sala1" data-type="clase" data-search="clase derecho civil maria garcia sala 1 lunes">
-              <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">Clase Derecho Civil</div><div class="admin-muted">Aula filas · Proyector</div></div></td>
-              <td>Prof. Maria Garcia</td>
-              <td><span class="room-pill sala1">Sala 1</span></td>
-              <td>Lunes</td>
-              <td class="admin-muted">08:00 - 10:00</td>
-              <td>30</td>
-              <td>Clase</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
+            {% for evt in eventos %}
+            {% set numero_sala = evt.salas[0].numero_sala if evt.salas else 'sin-sala' %}
+            {% set responsable = (evt.solicitud.solicitante.nombre ~ ' ' ~ evt.solicitud.solicitante.apellido) if (evt.solicitud and evt.solicitud.solicitante) else 'No asignado' %}
+
+            {% set color = "#24398A" %}
+            {% if numero_sala == 2 %}{% set color = "#5CA847" %}{% endif %}
+            {% if numero_sala == 3 %}{% set color = "#E1B73D" %}{% endif %}
+
+            <tr data-room="sala{{ numero_sala }}" data-search="{{ evt.titulo | lower }} {{ responsable | lower }} sala {{ numero_sala }}">
+              <td>
+                <div class="event-name-line" style="--event-color:{{ color }}">
+                  <div class="admin-strong">{{ evt.titulo }}</div>
+                  <div class="admin-muted">{{ evt.descripcion or 'Sin descripción' }}</div>
+                </div>
+              </td>
+              <td>{{ responsable }}</td>
+              <td>
+                {% if numero_sala != 'sin-sala' %}
+                  <span class="room-pill sala{{ numero_sala }}">Sala {{ numero_sala }}</span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ evt.fecha }}</td>
+              <td class="admin-muted">{{ evt.hora_de_inicio }} - {{ evt.hora_de_termino }}</td>
+              <td>{{ evt.no_de_asistentes or '-' }}</td>
+              <td>
+                <div class="admin-action-row">
+                  <button class="admin-soft-button" data-action="view" type="button">Ver</button>
+                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar">
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </td>
             </tr>
-            <tr data-room="sala2" data-type="taller" data-search="taller ingenieria carlos mendoza sala 2 lunes">
-              <td><div class="event-name-line" style="--event-color:#5CA847"><div class="admin-strong">Taller Ingenieria</div><div class="admin-muted">Mesas colaborativas</div></div></td>
-              <td>Dr. Carlos Mendoza</td>
-              <td><span class="room-pill sala2">Sala 2</span></td>
-              <td>Lunes</td>
-              <td class="admin-muted">09:00 - 12:00</td>
-              <td>20</td>
-              <td>Taller</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
+            {% else %}
+            <tr>
+              <td colspan="7" style="text-align: center;">No hay eventos registrados en la base de datos.</td>
             </tr>
-            <tr data-room="sala3" data-type="mantenimiento" data-search="mantenimiento preventivo personal unison sala 3 lunes">
-              <td><div class="event-name-line" style="--event-color:#E1B73D"><div class="admin-strong">Mantenimiento preventivo</div><div class="admin-muted">Revision de equipo</div></div></td>
-              <td>Personal UNISON</td>
-              <td><span class="room-pill sala3">Sala 3</span></td>
-              <td>Lunes</td>
-              <td class="admin-muted">08:00 - 12:00</td>
-              <td>2</td>
-              <td>Mantenimiento</td>
-              <td><span class="status-pill mantenimiento">Mantenimiento</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
-            </tr>
-            <tr data-room="sala1" data-type="reunion" data-search="reunion decanos luis ramos sala 1 martes">
-              <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">Reunion de Decanos</div><div class="admin-muted">Videoconferencia</div></div></td>
-              <td>Dr. Luis Ramos</td>
-              <td><span class="room-pill sala1">Sala 1</span></td>
-              <td>Martes</td>
-              <td class="admin-muted">12:00 - 14:00</td>
-              <td>12</td>
-              <td>Reunion</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
-            </tr>
-            <tr data-room="sala3" data-type="clase" data-search="clase economia sandra lopez sala 3 martes">
-              <td><div class="event-name-line" style="--event-color:#E1B73D"><div class="admin-strong">Clase Economia</div><div class="admin-muted">Acomodo tipo aula</div></div></td>
-              <td>Prof. Sandra Lopez</td>
-              <td><span class="room-pill sala3">Sala 3</span></td>
-              <td>Martes</td>
-              <td class="admin-muted">12:00 - 15:00</td>
-              <td>35</td>
-              <td>Clase</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
-            </tr>
-            <tr data-room="sala1" data-type="clase" data-search="examen final jorge perez sala 1 miercoles">
-              <td><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">Examen Final</div><div class="admin-muted">Control de acceso</div></div></td>
-              <td>Dr. Jorge Perez</td>
-              <td><span class="room-pill sala1">Sala 1</span></td>
-              <td>Miercoles</td>
-              <td class="admin-muted">10:00 - 14:00</td>
-              <td>40</td>
-              <td>Clase</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
-            </tr>
-            <tr data-room="sala2" data-type="conferencia" data-search="conferencia externa roberto silva sala 2 miercoles">
-              <td><div class="event-name-line" style="--event-color:#5CA847"><div class="admin-strong">Conferencia externa</div><div class="admin-muted">Sonido y cafeteria</div></div></td>
-              <td>Ing. Roberto Silva</td>
-              <td><span class="room-pill sala2">Sala 2</span></td>
-              <td>Miercoles</td>
-              <td class="admin-muted">13:00 - 15:00</td>
-              <td>60</td>
-              <td>Conferencia</td>
-              <td><span class="status-pill confirmado">Confirmado</span></td>
-              <td><div class="admin-action-row"><button class="admin-soft-button" data-action type="button">Ver</button><button class="admin-icon-button" data-action type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button></div></td>
-            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
@@ -193,7 +143,6 @@
     const search = document.getElementById('event-search');
     const topSearch = document.getElementById('top-search');
     const room = document.getElementById('room-filter');
-    const type = document.getElementById('type-filter');
     const rows = Array.from(document.querySelectorAll('#events-table tbody tr'));
 
     toggle?.addEventListener('click', function () {
@@ -211,13 +160,12 @@
       const term = (search.value || topSearch.value || '').trim().toLowerCase();
       rows.forEach(function (row) {
         const roomMatch = room.value === 'todas' || row.dataset.room === room.value;
-        const typeMatch = type.value === 'todos' || row.dataset.type === type.value;
         const searchMatch = !term || row.dataset.search.includes(term);
-        row.style.display = roomMatch && typeMatch && searchMatch ? '' : 'none';
+        row.style.display = roomMatch && searchMatch ? '' : 'none';
       });
     }
 
-    [search, room, type].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
+    [search, room].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
     topSearch.addEventListener('input', function () {
       search.value = topSearch.value;
       applyFilters();

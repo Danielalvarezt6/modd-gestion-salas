@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
 from app.core.database import get_db
-from app.models.salas import Solicitud
+from app.models.salas import Solicitud, Evento
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -65,9 +65,15 @@ async def requests_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/eventos", response_class=HTMLResponse)
-async def events_page(request: Request):
-    """Renderiza la seccion visual de eventos."""
-    return templates.TemplateResponse(request=request, name="eventos.html")
+async def events_page(request: Request, db: Session = Depends(get_db)):
+    eventos_db = db.execute(select(Evento)).scalars().all()
+
+    count_stmt = select(func.count(Evento.id_evento))
+    total = db.execute(count_stmt).scalar()
+
+    return templates.TemplateResponse(
+        "eventos.html", {"request": request, "eventos": eventos_db, "stat_total": total}
+    )
 
 
 @router.get("/reportes", response_class=HTMLResponse)
