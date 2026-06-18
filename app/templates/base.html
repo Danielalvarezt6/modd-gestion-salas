@@ -54,11 +54,45 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="font-sans antialiased">
+    <button id="modd-theme-toggle" class="modd-theme-toggle" type="button" aria-label="Cambiar a modo oscuro" title="Cambiar tema">
+        <i data-lucide="moon" class="w-4 h-4"></i>
+    </button>
+
     {% block content %}{% endblock %}
     
     <!-- Inicializar iconos de Lucide -->
     <script>
-        lucide.createIcons();
+        (function () {
+            const themeToggle = document.getElementById('modd-theme-toggle');
+            const html = document.documentElement;
+
+            function updateThemeButton(theme) {
+                if (!themeToggle) return;
+
+                themeToggle.innerHTML = '';
+                const icon = document.createElement('i');
+                icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+                icon.className = 'w-4 h-4';
+                themeToggle.appendChild(icon);
+                themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+
+                if (window.lucide) lucide.createIcons();
+            }
+
+            const initialTheme = localStorage.getItem('theme') || html.getAttribute('data-theme') || 'light';
+            html.setAttribute('data-theme', initialTheme);
+            updateThemeButton(initialTheme);
+
+            themeToggle?.addEventListener('click', function () {
+                const currentTheme = html.getAttribute('data-theme') || 'light';
+                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', nextTheme);
+                localStorage.setItem('theme', nextTheme);
+                updateThemeButton(nextTheme);
+            });
+
+            lucide.createIcons();
+        })();
     </script>
     
     {% block extra_scripts %}{% endblock %}

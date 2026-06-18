@@ -212,10 +212,6 @@
 {% block content %}
 
 <!-- Botón de tema flotante -->
-<button id="login-theme-toggle" class="theme-toggle-btn" title="Cambiar tema">
-  <i data-lucide="moon" class="w-4 h-4"></i>
-</button>
-
 <div class="login-wrap">
 
   <!-- ── Panel Izquierdo (Branding) ── -->
@@ -384,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ── Theme toggle ──
   const html = document.documentElement;
   const themeBtn = document.getElementById('login-theme-toggle');
+  if (themeBtn) {
 
   function updateThemeIcon(theme) {
     themeBtn.innerHTML = '';
@@ -403,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('theme', next);
     updateThemeIcon(next);
   });
+  }
 
   // ── Formulario ──
   const loginForm      = document.getElementById('login-form');

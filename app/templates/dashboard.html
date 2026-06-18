@@ -1,50 +1,838 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Dashboard - MODD</title>
-  <style>
-    body {
-        font-family: Inter, sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MODD{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Variables (heredadas de base.html) ── */
+  :root {
+    --blue-600: #24398A;
+    --blue-700: #1c2d6e;
+    --blue-50: #f0f3fc;
+    --blue-100: #dce3f7;
+    --gold: #E1B73D;
+    --gold-light: #fdf6e3;
+    --green: #5CA847;
+    --green-light: #edf7ec;
+    --red: #D5433C;
+    --red-light: #fef0f0;
+    --border: #e5e9f2;
+    --text: #1a2340;
+    --muted: #6b7a99;
+    --surface: #ffffff;
+    --bg: #f7f8fc;
+  }
+
+  [data-theme="dark"] {
+    --blue-600: #5b7bd6;
+    --blue-700: #4a6bc9;
+    --blue-50: #1a1f3a;
+    --blue-100: #252d4d;
+    --gold: #ffc107;
+    --gold-light: #332700;
+    --green: #81c784;
+    --green-light: #1b3d1b;
+    --red: #ef5350;
+    --red-light: #3d1a1a;
+    --border: #3a4456;
+    --text: #e0e0e0;
+    --muted: #a0a0a0;
+    --surface: #1e1e2e;
+    --bg: #121218;
+  }
+
+  /* ── Layout ── */
+  .dashboard-wrap {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .sidebar-brand img {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: contain;
+  }
+
+  .sidebar-brand h1 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--blue-600);
+    margin: 0;
+  }
+
+  .sidebar-brand small {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    display: block;
+    margin-top: -2px;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+
+  .sidebar-nav a.active {
+    background: var(--blue-50);
+    color: var(--blue-600);
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .sidebar-nav a:hover {
+    background: rgba(91, 123, 214, 0.15);
+    color: var(--blue-600);
+  }
+
+  [data-theme="dark"] .sidebar-nav a.active {
+    background: rgba(91, 123, 214, 0.2);
+    color: var(--blue-600);
+  }
+
+  .sidebar-nav a i {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar-footer a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .sidebar-footer a:hover {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  /* ── Main content ── */
+  .main-content {
+    flex: 1;
+    padding: 2rem 2rem 2rem 2.5rem;
+    overflow-x: hidden;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .topbar-left h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .topbar-left p {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .topbar-right .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .topbar-right .user-badge img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--blue-100);
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s;
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(36, 57, 138, 0.06);
+  }
+
+  .stat-card .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-card .stat-number .highlight-blue {
+    color: var(--blue-600);
+  }
+
+  .stat-card .stat-number .highlight-gold {
+    color: var(--gold);
+  }
+
+  .stat-card .stat-number .highlight-green {
+    color: var(--green);
+  }
+
+  .stat-card .stat-number .highlight-red {
+    color: var(--red);
+  }
+
+  .stat-card .stat-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* ── Two column layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .two-col {
+      grid-template-columns: 1fr;
     }
-    .container {
-        text-align: center;
-        padding: 2rem;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 1rem;
-        backdrop-filter: blur(10px);
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .panel-header a {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--blue-600);
+    text-decoration: none;
+  }
+
+  .panel-header a:hover {
+    text-decoration: underline;
+  }
+
+  .panel-body {
+    padding: 0.5rem 1rem;
+  }
+
+  /* ── Tablas simples ── */
+  .table-mini {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .table-mini td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .table-mini tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-mini .event-title {
+    font-weight: 600;
+  }
+
+  .table-mini .event-meta {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .badge-status {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-pending {
+    background: #fef3dc;
+    color: #9a7520;
+  }
+
+  .badge-approved {
+    background: var(--green-light);
+    color: #3d8035;
+  }
+
+  .badge-rejected {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  .badge-cancelled {
+    background: #e5e8f0;
+    color: #6b7a99;
+  }
+
+  [data-theme="dark"] .badge-pending {
+    background: #332a00;
+    color: #ffc107;
+  }
+
+  [data-theme="dark"] .badge-approved {
+    background: #1b3d1b;
+    color: #81c784;
+  }
+
+  [data-theme="dark"] .badge-rejected {
+    background: #3d1a1a;
+    color: #ef5350;
+  }
+
+  [data-theme="dark"] .badge-cancelled {
+    background: #2a2d3a;
+    color: #a0a0a0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+
+  .empty-state i {
+    display: block;
+    margin: 0 auto 0.5rem;
+    opacity: 0.4;
+  }
+
+  /* ── Botón flotante de acción ── */
+  .fab-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-fab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .btn-fab:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-fab-primary {
+    background: var(--blue-600);
+    color: #fff;
+  }
+
+  .btn-fab-primary:hover {
+    background: var(--blue-700);
+  }
+
+  .btn-fab-secondary {
+    background: var(--gold);
+    color: #fff;
+  }
+
+  .btn-fab-secondary:hover {
+    background: #c89e2f;
+  }
+
+  /* ── Móvil toggle sidebar ── */
+  .sidebar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      transform: translateX(-100%);
+      z-index: 1000;
+      width: 280px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
     }
-    h1 { margin: 0 0 1rem 0; }
-    p { margin: 0.5rem 0; }
-    a {
-        display: inline-block;
-        margin-top: 1rem;
-        padding: 0.75rem 1.5rem;
-        background: white;
-        color: #667eea;
-        text-decoration: none;
-        border-radius: 0.5rem;
-        font-weight: 600;
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+      display: block;
+    }
+
+    .main-content {
+      padding: 1rem;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .two-col {
+      grid-template-columns: 1fr;
+    }
+
+    .topbar-right .user-badge span {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Overlay para móvil */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  .overlay.active {
+    display: block;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrap">
+
+  <!-- Overlay (móvil) -->
+  <div id="sidebar-overlay" class="overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestión de Salas</small>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="active">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="/calendario">
+        <i data-lucide="calendar"></i> Calendario
+      </a>
+      <a href="/solicitudes">
+        <i data-lucide="clipboard-list"></i> Solicitudes
+      </a>
+      <a href="/eventos">
+        <i data-lucide="calendar-plus"></i> Eventos
+      </a>
+      <a href="/reportes">
+        <i data-lucide="bar-chart-2"></i> Reportes
+      </a>
+      <a href="#">
+        <i data-lucide="building-2"></i> Salas
+      </a>
+    </nav>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-footer">
+      <a href="/login" id="logout-link">
+        <i data-lucide="log-out"></i> Cerrar sesión
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Panel de Administración</h2>
+        <p>Bienvenido, <strong>admin@unison.mx</strong> · Hoy es <span id="dashboard-date"></span></p>
+      </div>
+      <div class="topbar-right">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="user-badge">
+          <img src="https://ui-avatars.com/api/?name=Admin+UNISON&background=24398A&color=fff&size=32" alt="Avatar">
+          <span>Administrador</span>
+        </div>
+        <!-- El tema se maneja desde base.html con su propio botón, así que no lo duplicamos -->
+      </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="fab-group">
+      <a class="btn-fab btn-fab-primary" href="/calendario">
+        <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Evento
+      </a>
+      <button class="btn-fab btn-fab-secondary" onclick="alert('Abrir formulario de nueva solicitud')">
+        <i data-lucide="file-plus" class="w-4 h-4"></i> Nueva Solicitud
+      </button>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Eventos de hoy</div>
+        <div class="stat-number"><span class="highlight-blue">4</span></div>
+        <div class="stat-sub">2 en Sala 1, 1 en Sala 2, 1 en Sala 3</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Solicitudes pendientes</div>
+        <div class="stat-number"><span class="highlight-gold">5</span></div>
+        <div class="stat-sub">Requieren revisión</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Salas ocupadas ahora</div>
+        <div class="stat-number"><span class="highlight-green">2</span> / 3</div>
+        <div class="stat-sub">Sala 1 y Sala 2 en uso</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Eventos esta semana</div>
+        <div class="stat-number"><span class="highlight-red">18</span></div>
+        <div class="stat-sub">+3 vs semana pasada</div>
+      </div>
+    </div>
+
+
+    <!-- Dos columnas: eventos próximos y solicitudes recientes -->
+    <div class="two-col">
+      <!-- Próximos eventos -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📅 Próximos eventos</h3>
+          <a href="#">Ver todos</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini">
+            <tr>
+              <td>
+                <div class="event-title">Taller de Innovación</div>
+                <div class="event-meta">Sala 1 · 10:00 - 12:00</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-approved">Aprobado</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Reunión Académica</div>
+                <div class="event-meta">Sala 2 · 13:00 - 14:30</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-pending">Pendiente</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Conferencia STEM</div>
+                <div class="event-meta">Sala 3 · 15:00 - 17:00</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-approved">Aprobado</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Clase de Diseño</div>
+                <div class="event-meta">Sala 1 · 08:00 - 09:30</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-cancelled">Cancelado</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Solicitudes recientes -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📋 Solicitudes recientes</h3>
+          <a href="#">Ver todas</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini">
+            <tr>
+              <td>
+                <div class="event-title">Seminario de Investigación</div>
+                <div class="event-meta">Sala 2 · 18 Jun</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-pending">Pendiente</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Reunión de Consejo</div>
+                <div class="event-meta">Sala 1 · 20 Jun</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-approved">Aprobada</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Taller de Emprendimiento</div>
+                <div class="event-meta">Sala 3 · 22 Jun</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-rejected">Rechazada</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="event-title">Presentación de Proyectos</div>
+                <div class="event-meta">Sala 1 · 24 Jun</div>
+              </td>
+              <td style="text-align:right;">
+                <span class="badge-status badge-pending">Pendiente</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- (Opcional) Más contenido, ejemplo: actividad reciente o gráfico -->
+    <div class="panel" style="margin-bottom: 2rem;">
+      <div class="panel-header">
+        <h3>📊 Ocupación de salas (hoy)</h3>
+        <a href="#">Ver detalle</a>
+      </div>
+      <div class="panel-body" style="padding: 1.5rem;">
+        <div style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:var(--blue-600);">Sala 1</div>
+            <div style="font-size:2rem; font-weight:800; color:var(--blue-600);">60%</div>
+            <div style="font-size:0.75rem; color:var(--muted);">3 de 5 horas ocupadas</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:var(--green);">Sala 2</div>
+            <div style="font-size:2rem; font-weight:800; color:var(--green);">40%</div>
+            <div style="font-size:0.75rem; color:var(--muted);">2 de 5 horas ocupadas</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:var(--gold);">Sala 3</div>
+            <div style="font-size:2rem; font-weight:800; color:var(--gold);">20%</div>
+            <div style="font-size:0.75rem; color:var(--muted);">1 de 5 horas ocupadas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Inicializar Lucide
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const dashboardDate = document.getElementById('dashboard-date');
+    if (dashboardDate) {
+      dashboardDate.textContent = new Date().toLocaleDateString('es-MX');
+    }
+
+    // Sidebar toggle en móvil
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (sidebar.classList.contains('open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
         }
-    a:hover { background: #f0f0f0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1> ¡Autenticación Exitosa!</h1>
-    <p>Has iniciado sesión correctamente</p>
-    <p><strong>Email:</strong> admin@unison.mx</p>
-    <p style="margin-top: 1.5rem; opacity: 0.9;">
-      El dashboard completo se implementará en la Fase 2.
-    </p>
-    <a href="/">Volver al inicio</a>
-  </div>
-</body>
-</html>
+      });
+    }
+
+    overlay.addEventListener('click', closeSidebar);
+
+    // Cerrar sidebar al hacer click en un enlace (móvil)
+    document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
+      link.addEventListener('click', function () {
+        if (window.innerWidth <= 768) {
+          closeSidebar();
+        }
+      });
+    });
+
+    // Cerrar sesión: redirigir a login
+    document.getElementById('logout-link')?.addEventListener('click', function (e) {
+      e.preventDefault();
+      // Limpiar datos de sesión (simulado)
+      localStorage.removeItem('token'); // si se usa
+      window.location.href = '/login';
+    });
+
+    // Ejemplo de botón "Nuevo Evento" / "Nueva Solicitud" (mock)
+    document.querySelectorAll('.btn-fab').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        // Ya tienen alert, pero se puede mejorar
+      });
+    });
+  });
+</script>
+{% endblock %}

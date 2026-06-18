@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - MODD{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <div id="sidebar-overlay" class="admin-overlay"></div>
+
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="admin-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/calendario"><i data-lucide="calendar"></i> Calendario</a>
+      <a href="/solicitudes"><i data-lucide="clipboard-list"></i> Solicitudes</a>
+      <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
+      <a href="/reportes" class="active"><i data-lucide="bar-chart-2"></i> Reportes</a>
+      <a href="#"><i data-lucide="building-2"></i> Salas</a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/login" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title">
+        <h2>Generar Reportes PDF</h2>
+        <p>Exporta informacion de eventos, solicitudes y uso de salas.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <div class="admin-search">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <input id="report-search" type="search" placeholder="Buscar...">
+        </div>
+        <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-avatar">AD</div>
+      </div>
+    </header>
+
+    <section class="admin-hero-card">
+      <h3>Exportar informacion de salas</h3>
+      <p>Genera archivos PDF con historial, ocupacion, asistentes, responsables y requerimientos de cada evento.</p>
+    </section>
+
+    <section class="report-grid" id="report-grid">
+      <article class="report-card" data-search="semanal eventos semana requisitos asistentes">
+        <div class="report-icon" style="--report-bg:rgba(36,57,138,.1);--report-color:#24398A">
+          <i data-lucide="file-text" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Semanal</h3>
+          <p>Eventos de la semana actual con detalle de requisitos y asistentes.</p>
+          <button class="admin-primary-button mt-4" data-report="Reporte semanal" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="mensual historial mes uso salas solicitantes estadisticas">
+        <div class="report-icon" style="--report-bg:rgba(92,168,71,.12);--report-color:#176b2b">
+          <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Mensual</h3>
+          <p>Historial del mes: uso de salas, solicitantes y estadisticas.</p>
+          <button class="admin-primary-button mt-4" data-report="Reporte mensual" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="informe por sala actividad sala periodo">
+        <div class="report-icon" style="--report-bg:rgba(148,103,33,.13);--report-color:#946721">
+          <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Informe por Sala</h3>
+          <p>Actividad detallada de una sala especifica en el periodo seleccionado.</p>
+          <button class="admin-primary-button mt-4" data-report="Informe por sala" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+
+      <article class="report-card" data-search="personalizado rango fechas salas tipo evento">
+        <div class="report-icon" style="--report-bg:rgba(225,183,61,.17);--report-color:#8a6200">
+          <i data-lucide="file-cog" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3>Reporte Personalizado</h3>
+          <p>Define rango de fechas, salas y tipo de evento para exportar.</p>
+          <button class="admin-primary-button mt-4" data-report="Reporte personalizado" type="button">
+            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <section class="filter-panel">
+      <h3>Filtros personalizados</h3>
+      <div class="filter-grid">
+        <label>
+          Fecha inicio
+          <input class="admin-input" type="date" id="start-date">
+        </label>
+        <label>
+          Fecha fin
+          <input class="admin-input" type="date" id="end-date">
+        </label>
+        <label>
+          Sala
+          <select class="admin-select" id="report-room">
+            <option>Todas las salas</option>
+            <option>Sala 1</option>
+            <option>Sala 2</option>
+            <option>Sala 3</option>
+          </select>
+        </label>
+      </div>
+      <button class="admin-primary-button" id="export-filters" type="button">
+        <i data-lucide="download" class="w-4 h-4"></i> Exportar con filtros
+      </button>
+    </section>
+  </main>
+</div>
+
+<div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
+    const search = document.getElementById('report-search');
+    const cards = Array.from(document.querySelectorAll('.report-card'));
+
+    toggle?.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    });
+    overlay?.addEventListener('click', function () {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+
+    search.addEventListener('input', function () {
+      const term = search.value.trim().toLowerCase();
+      cards.forEach(function (card) {
+        card.style.display = !term || card.dataset.search.includes(term) ? '' : 'none';
+      });
+    });
+
+    document.querySelectorAll('[data-report], #export-filters').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const label = button.dataset.report || 'Reporte con filtros';
+        showToast(label + ' preparado para generacion PDF.');
+      });
+    });
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById('page-toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2800);
+    }
+  });
+</script>
+{% endblock %}

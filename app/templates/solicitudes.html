@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitudes - MODD{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <div id="sidebar-overlay" class="admin-overlay"></div>
+
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="admin-brand">
+      <img src="/static/assets/logo.png" alt="MODD Logo">
+      <div>
+        <h1>MODD</h1>
+        <small>Gestion de Salas</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/calendario"><i data-lucide="calendar"></i> Calendario</a>
+      <a href="/solicitudes" class="active"><i data-lucide="clipboard-list"></i> Solicitudes</a>
+      <a href="/eventos"><i data-lucide="calendar-plus"></i> Eventos</a>
+      <a href="/reportes"><i data-lucide="bar-chart-2"></i> Reportes</a>
+      <a href="#"><i data-lucide="building-2"></i> Salas</a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/login" id="logout-link"><i data-lucide="log-out"></i> Cerrar sesion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title">
+        <h2>Solicitudes</h2>
+        <p>Revision, aprobacion y seguimiento de solicitudes de sala.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <div class="admin-search">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <input id="top-search" type="search" placeholder="Buscar...">
+        </div>
+        <button class="admin-menu-toggle" id="sidebar-toggle" aria-label="Abrir menu">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div class="admin-avatar">AD</div>
+      </div>
+    </header>
+
+    <section class="admin-stat-grid" aria-label="Resumen de solicitudes">
+      <button class="admin-stat-card is-selected" data-status-card="todas" type="button">
+        <div class="admin-stat-value">5</div>
+        <div class="admin-stat-label">Todas</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="pendiente" type="button" style="--stat-color:#8a6200">
+        <div class="admin-stat-value">3</div>
+        <div class="admin-stat-label">Pendiente</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="aprobada" type="button" style="--stat-color:#176b2b">
+        <div class="admin-stat-value">1</div>
+        <div class="admin-stat-label">Aprobada</div>
+      </button>
+      <button class="admin-stat-card" data-status-card="rechazada" type="button" style="--stat-color:#9f1f1a">
+        <div class="admin-stat-value">1</div>
+        <div class="admin-stat-label">Rechazada</div>
+      </button>
+    </section>
+
+    <section class="admin-filter-row" aria-label="Filtros de solicitudes">
+      <div class="admin-field-with-icon">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input id="request-search" type="search" placeholder="Buscar por nombre, evento o institucion...">
+      </div>
+      <select id="request-status" class="admin-select" aria-label="Estado">
+        <option value="todas">Todos los estados</option>
+        <option value="pendiente">Pendientes</option>
+        <option value="aprobada">Aprobadas</option>
+        <option value="rechazada">Rechazadas</option>
+        <option value="cancelada">Canceladas</option>
+      </select>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="requests-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Solicitante</th>
+              <th>Institucion</th>
+              <th>Evento</th>
+              <th>Sala</th>
+              <th>Fecha / Hora</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-status="pendiente" data-search="ana torres seminario posgrado depto letras sala 2">
+              <td class="admin-muted">sol1</td>
+              <td><div class="admin-strong">Mg. Ana Torres</div><div class="admin-muted">ana.torres@unison.mx</div></td>
+              <td>Depto. de Letras</td>
+              <td><div class="admin-strong">Seminario de Posgrado</div><div class="admin-muted">45 asistentes · Teatro</div></td>
+              <td>Sala 2</td>
+              <td><div>Martes</div><div class="admin-muted">08:00 - 10:00</div></td>
+              <td><span class="status-pill pendiente">Pendiente</span></td>
+              <td>
+                <div class="admin-action-row">
+                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
+                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr data-status="pendiente" data-search="veronica cruz clase medicina depto ciencias sala 3">
+              <td class="admin-muted">sol2</td>
+              <td><div class="admin-strong">Dra. Veronica Cruz</div><div class="admin-muted">v.cruz@unison.mx</div></td>
+              <td>Depto. de Ciencias</td>
+              <td><div class="admin-strong">Clase Medicina</div><div class="admin-muted">25 asistentes · Aula filas</div></td>
+              <td>Sala 3</td>
+              <td><div>Miercoles</div><div class="admin-muted">09:00 - 11:00</div></td>
+              <td><span class="status-pill pendiente">Pendiente</span></td>
+              <td>
+                <div class="admin-action-row">
+                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
+                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr data-status="pendiente" data-search="diana morales clase literatura empresa externa sala 2">
+              <td class="admin-muted">sol3</td>
+              <td><div class="admin-strong">Lic. Diana Morales</div><div class="admin-muted">diana.morales@gmail.com</div></td>
+              <td>Empresa externa</td>
+              <td><div class="admin-strong">Clase Literatura</div><div class="admin-muted">22 asistentes · U / Herradura</div></td>
+              <td>Sala 2</td>
+              <td><div>Viernes</div><div class="admin-muted">09:00 - 12:00</div></td>
+              <td><span class="status-pill pendiente">Pendiente</span></td>
+              <td>
+                <div class="admin-action-row">
+                  <button class="admin-soft-button" data-action="approve" type="button">Aprobar</button>
+                  <button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr data-status="rechazada" data-search="sandra lopez conferencia finanzas depto economia sala 3">
+              <td class="admin-muted">sol4</td>
+              <td><div class="admin-strong">Prof. Sandra Lopez</div><div class="admin-muted">sandra.lopez@unison.mx</div></td>
+              <td>Depto. de Economia</td>
+              <td><div class="admin-strong">Conferencia de Finanzas</div><div class="admin-muted">70 asistentes · Teatro</div></td>
+              <td>Sala 3</td>
+              <td><div>Viernes</div><div class="admin-muted">13:00 - 16:00</div></td>
+              <td><span class="status-pill rechazada">Rechazada</span></td>
+              <td><button class="admin-soft-button" data-action="view" type="button">Ver detalle</button></td>
+            </tr>
+            <tr data-status="aprobada" data-search="roberto silva workshop innovacion empresa externa sala 3">
+              <td class="admin-muted">sol5</td>
+              <td><div class="admin-strong">Ing. Roberto Silva</div><div class="admin-muted">rsilva@empresa.mx</div></td>
+              <td>Empresa externa</td>
+              <td><div class="admin-strong">Workshop de Innovacion</div><div class="admin-muted">35 asistentes · Grupos de trabajo</div></td>
+              <td>Sala 3</td>
+              <td><div>Jueves</div><div class="admin-muted">08:00 - 12:00</div></td>
+              <td><span class="status-pill aprobada">Aprobada</span></td>
+              <td><button class="admin-soft-button" data-action="view" type="button">Ver evento</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
+    const search = document.getElementById('request-search');
+    const topSearch = document.getElementById('top-search');
+    const statusSelect = document.getElementById('request-status');
+    const rows = Array.from(document.querySelectorAll('#requests-table tbody tr'));
+    const cards = Array.from(document.querySelectorAll('[data-status-card]'));
+    let activeStatus = 'todas';
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    toggle?.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    });
+    overlay?.addEventListener('click', closeSidebar);
+
+    function applyFilters() {
+      const term = (search.value || topSearch.value || '').trim().toLowerCase();
+      rows.forEach(function (row) {
+        const statusMatch = activeStatus === 'todas' || row.dataset.status === activeStatus;
+        const searchMatch = !term || row.dataset.search.includes(term);
+        row.style.display = statusMatch && searchMatch ? '' : 'none';
+      });
+    }
+
+    cards.forEach(function (card) {
+      card.addEventListener('click', function () {
+        activeStatus = card.dataset.statusCard;
+        statusSelect.value = activeStatus;
+        cards.forEach(function (item) { item.classList.toggle('is-selected', item === card); });
+        applyFilters();
+      });
+    });
+
+    statusSelect.addEventListener('change', function () {
+      activeStatus = statusSelect.value;
+      cards.forEach(function (card) { card.classList.toggle('is-selected', card.dataset.statusCard === activeStatus); });
+      applyFilters();
+    });
+    search.addEventListener('input', applyFilters);
+    topSearch.addEventListener('input', function () {
+      search.value = topSearch.value;
+      applyFilters();
+    });
+
+    document.querySelectorAll('[data-action]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        showToast(button.dataset.action === 'approve' ? 'Solicitud aprobada visualmente.' : 'Accion preparada para integracion.');
+      });
+    });
+
+    document.getElementById('logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById('page-toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2800);
+    }
+  });
+</script>
+{% endblock %}

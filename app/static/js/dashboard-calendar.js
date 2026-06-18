@@ -1,0 +1,778 @@
+(function () {
+  const rooms = [
+    { id: 'sala1', name: 'Sala 1', color: '#24398A' },
+    { id: 'sala2', name: 'Sala 2', color: '#5CA847' },
+    { id: 'sala3', name: 'Sala 3', color: '#E1B73D' }
+  ];
+
+  const dayNames = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+  const START_MIN = 8 * 60;
+  const END_MIN = 18 * 60;
+  const STEP_MIN = 60;
+  const HOUR_HEIGHT = 74;
+
+  let events = [];
+  let weekStart = getMonday(new Date());
+  let visibleRooms = rooms.map((room) => room.id);
+  let searchTerm = '';
+  let fullCalendar = null;
+  let activeView = 'week';
+  let dragState = null;
+  let activeGuide = null;
+  let alertTimer = null;
+
+  document.addEventListener('DOMContentLoaded', initCalendarModule);
+
+  function initCalendarModule() {
+    events = createSeedEvents();
+    bindControls();
+    renderWeekCalendar();
+    initFullCalendar();
+    renderFullCalendarEvents();
+  }
+
+  function bindControls() {
+    document.getElementById('calendar-new-event')?.addEventListener('click', () => {
+      openEventModal({
+        date: toISODate(new Date()),
+        rooms: ['sala1'],
+        startTime: '09:00',
+        endTime: '10:00'
+      });
+    });
+
+    document.getElementById('quick-new-event')?.addEventListener('click', () => {
+      openEventModal({
+        date: toISODate(new Date()),
+        rooms: ['sala1'],
+        startTime: '09:00',
+        endTime: '10:00'
+      });
+    });
+
+    document.getElementById('calendar-search')?.addEventListener('input', (event) => {
+      searchTerm = event.target.value.trim().toLowerCase();
+      rerenderActiveViews();
+    });
+
+    document.querySelectorAll('.modd-room-filters input').forEach((input) => {
+      input.addEventListener('change', () => {
+        const checkedRooms = Array.from(document.querySelectorAll('.modd-room-filters input:checked')).map((item) => item.value);
+        if (!checkedRooms.length) {
+          input.checked = true;
+          showAlert('Debe quedar al menos una sala visible.');
+          return;
+        }
+        visibleRooms = checkedRooms;
+        rerenderActiveViews();
+      });
+    });
+
+    document.querySelectorAll('[data-calendar-view]').forEach((button) => {
+      button.addEventListener('click', () => setCalendarView(button.dataset.calendarView));
+    });
+
+    document.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', closeEventModal);
+    });
+
+    document.getElementById('event-form')?.addEventListener('submit', saveEventFromModal);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeEventModal();
+    });
+  }
+
+  function setCalendarView(view) {
+    activeView = view;
+    document.querySelectorAll('[data-calendar-view]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.calendarView === view);
+    });
+
+    const weekView = document.getElementById('week-calendar-view');
+    const fullView = document.getElementById('fullcalendar-view');
+
+    if (view === 'week') {
+      weekView?.classList.remove('hidden');
+      fullView?.classList.add('hidden');
+      renderWeekCalendar();
+      return;
+    }
+
+    weekView?.classList.add('hidden');
+    fullView?.classList.remove('hidden');
+
+    if (fullCalendar) {
+      fullCalendar.changeView(view === 'month' ? 'dayGridMonth' : 'timeGridDay');
+      fullCalendar.gotoDate(weekStart);
+      fullCalendar.updateSize();
+      renderFullCalendarEvents();
+    }
+  }
+
+  function renderWeekCalendar() {
+    const grid = document.getElementById('week-calendar-grid');
+    if (!grid) return;
+
+    const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+    grid.style.setProperty('--day-count', String(days.length));
+    grid.style.setProperty('--room-count', String(visibleRooms.length));
+    grid.innerHTML = '';
+
+    const corner = document.createElement('div');
+    corner.className = 'modd-time-corner';
+    corner.textContent = 'Hora';
+    grid.appendChild(corner);
+
+    days.forEach((date, index) => {
+      const heading = document.createElement('div');
+      heading.className = 'modd-day-heading';
+      heading.style.gridColumn = String(index + 2);
+      heading.innerHTML = `
+        <div class="modd-day-title">${dayNames[index]} <span>${formatShortDate(date)}</span></div>
+        <div class="modd-room-heading-row">
+          ${visibleRooms.map((roomId) => {
+            const room = findRoom(roomId);
+            return `<div class="modd-room-heading" style="--room-color:${room.color}">${room.name}</div>`;
+          }).join('')}
+        </div>
+      `;
+      grid.appendChild(heading);
+    });
+
+    const timeRail = document.createElement('div');
+    timeRail.className = 'modd-time-rail';
+    for (let minutes = START_MIN; minutes < END_MIN; minutes += 60) {
+      const slot = document.createElement('div');
+      slot.className = 'modd-time-slot';
+      slot.textContent = formatMinutes(minutes);
+      timeRail.appendChild(slot);
+    }
+    grid.appendChild(timeRail);
+
+    days.forEach((date, index) => {
+      const dayColumn = document.createElement('div');
+      dayColumn.className = 'modd-day-column';
+      dayColumn.dataset.dayIndex = String(index);
+      dayColumn.dataset.date = toISODate(date);
+      dayColumn.style.gridColumn = String(index + 2);
+
+      visibleRooms.forEach((roomId) => {
+        const lane = document.createElement('div');
+        lane.className = 'modd-room-lane';
+        lane.dataset.room = roomId;
+        lane.dataset.date = toISODate(date);
+        dayColumn.appendChild(lane);
+      });
+
+      dayColumn.addEventListener('click', handleEmptySlotClick);
+      grid.appendChild(dayColumn);
+    });
+
+    activeGuide = document.createElement('div');
+    activeGuide.className = 'modd-drag-guide';
+
+    const dayColumns = Array.from(grid.querySelectorAll('.modd-day-column'));
+    filteredEvents().forEach((eventItem) => renderWeekEvent(eventItem, dayColumns));
+  }
+
+  function renderWeekEvent(eventItem, dayColumns) {
+    const date = getEventDate(eventItem);
+    const dayIndex = dayDifference(weekStart, parseDate(date));
+    if (dayIndex < 0 || dayIndex > 6) return;
+
+    const shownRooms = eventItem.rooms.filter((roomId) => visibleRooms.includes(roomId));
+    if (!shownRooms.length) return;
+
+    const dayColumn = dayColumns[dayIndex];
+    if (!dayColumn) return;
+
+    const firstRoomIndex = Math.min(...shownRooms.map((roomId) => visibleRooms.indexOf(roomId)));
+    const lastRoomIndex = Math.max(...shownRooms.map((roomId) => visibleRooms.indexOf(roomId)));
+    const roomSpan = lastRoomIndex - firstRoomIndex + 1;
+    const startMinutes = timeToMinutes(getEventTime(eventItem.start));
+    const endMinutes = timeToMinutes(getEventTime(eventItem.end));
+    const top = ((startMinutes - START_MIN) / 60) * HOUR_HEIGHT;
+    const height = Math.max(42, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 6);
+    const leftPercent = (firstRoomIndex / visibleRooms.length) * 100;
+    const widthPercent = (roomSpan / visibleRooms.length) * 100;
+    const eventColor = getEventColor(eventItem);
+
+    const card = document.createElement('article');
+    card.className = 'modd-event-card';
+    card.dataset.eventId = eventItem.id;
+    card.style.setProperty('--event-color', eventColor);
+    card.style.top = `${top + 3}px`;
+    card.style.height = `${height}px`;
+    card.style.left = `calc(${leftPercent}% + 4px)`;
+    card.style.width = `calc(${widthPercent}% - 8px)`;
+    card.innerHTML = `
+      <strong class="modd-event-title">${escapeHTML(eventItem.title)}</strong>
+      <span class="modd-event-meta">${getEventTime(eventItem.start)} - ${getEventTime(eventItem.end)} - ${eventItem.rooms.map((roomId) => findRoom(roomId).name).join(', ')}</span>
+      <span class="modd-event-responsible">${escapeHTML(eventItem.responsible)}</span>
+      <span class="modd-event-status ${eventItem.status}">${eventItem.status}</span>
+      <span class="modd-resize-handle modd-room-resize-handle" title="Extender salas" aria-hidden="true"></span>
+      <span class="modd-duration-resize-handle" title="Extender horas" aria-hidden="true"></span>
+    `;
+
+    card.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openEventModal(eventItem);
+    });
+
+    card.addEventListener('pointerdown', (event) => startPointerInteraction(event, eventItem, dayColumn));
+    dayColumn.appendChild(card);
+  }
+
+  function startPointerInteraction(pointerEvent, eventItem, dayColumn) {
+    if (pointerEvent.button !== 0) return;
+    pointerEvent.preventDefault();
+    pointerEvent.stopPropagation();
+
+    let type = 'drag';
+    if (pointerEvent.target.classList.contains('modd-room-resize-handle')) type = 'resize-room';
+    if (pointerEvent.target.classList.contains('modd-duration-resize-handle')) type = 'resize-time';
+    const card = pointerEvent.currentTarget;
+    const original = cloneEvent(eventItem);
+    const visibleEventRooms = original.rooms.filter((roomId) => visibleRooms.includes(roomId));
+    const roomCount = Math.max(1, Math.min(visibleEventRooms.length || original.rooms.length, visibleRooms.length));
+
+    dragState = {
+      type,
+      eventId: eventItem.id,
+      original,
+      card,
+      roomCount,
+      duration: timeToMinutes(getEventTime(original.end)) - timeToMinutes(getEventTime(original.start)),
+      startRoomIndex: Math.max(0, visibleRooms.indexOf(visibleEventRooms[0] || original.rooms[0])),
+      fixedDayColumn: dayColumn
+    };
+
+    card.classList.add('dragging');
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', finishPointerInteraction, { once: true });
+    handlePointerMove(pointerEvent);
+  }
+
+  function handlePointerMove(pointerEvent) {
+    if (!dragState) return;
+
+    const targetColumn = dragState.type === 'resize-room' || dragState.type === 'resize-time'
+      ? dragState.fixedDayColumn
+      : findDayColumnAtPoint(pointerEvent.clientX, pointerEvent.clientY);
+
+    if (!targetColumn) {
+      hideGuide();
+      dragState.proposed = null;
+      return;
+    }
+
+    const rect = targetColumn.getBoundingClientRect();
+    const roomWidth = rect.width / visibleRooms.length;
+    const rawRoomIndex = clamp(Math.floor((pointerEvent.clientX - rect.left) / roomWidth), 0, visibleRooms.length - 1);
+    let proposed;
+
+    if (dragState.type === 'resize-room') {
+      const endIndex = clamp(rawRoomIndex, dragState.startRoomIndex, visibleRooms.length - 1);
+      proposed = {
+        ...dragState.original,
+        rooms: visibleRooms.slice(dragState.startRoomIndex, endIndex + 1)
+      };
+    } else if (dragState.type === 'resize-time') {
+      const startMinutes = timeToMinutes(getEventTime(dragState.original.start));
+      let endMinutes = START_MIN + Math.round(((pointerEvent.clientY - rect.top) / HOUR_HEIGHT) * 60 / STEP_MIN) * STEP_MIN;
+      endMinutes = clamp(endMinutes, startMinutes + STEP_MIN, END_MIN);
+
+      proposed = {
+        ...dragState.original,
+        end: `${getEventDate(dragState.original)}T${formatMinutes(endMinutes)}:00`
+      };
+    } else {
+      const maxRoomStart = Math.max(0, visibleRooms.length - dragState.roomCount);
+      const roomStart = clamp(rawRoomIndex, 0, maxRoomStart);
+      let startMinutes = START_MIN + Math.round(((pointerEvent.clientY - rect.top) / HOUR_HEIGHT) * 60 / STEP_MIN) * STEP_MIN;
+      startMinutes = clamp(startMinutes, START_MIN, END_MIN - dragState.duration);
+
+      const date = targetColumn.dataset.date;
+      proposed = {
+        ...dragState.original,
+        start: `${date}T${formatMinutes(startMinutes)}:00`,
+        end: `${date}T${formatMinutes(startMinutes + dragState.duration)}:00`,
+        rooms: visibleRooms.slice(roomStart, roomStart + dragState.roomCount)
+      };
+    }
+
+    dragState.proposed = proposed;
+    const conflict = hasConflict(proposed, proposed.id);
+    showGuide(targetColumn, proposed, conflict);
+  }
+
+  function finishPointerInteraction() {
+    document.removeEventListener('pointermove', handlePointerMove);
+
+    if (!dragState) return;
+
+    const eventItem = events.find((item) => item.id === dragState.eventId);
+    const proposed = dragState.proposed;
+    dragState.card.classList.remove('dragging');
+
+    if (eventItem && proposed) {
+      if (hasConflict(proposed, proposed.id)) {
+        showAlert('No se puede aplicar el cambio: el evento se solapa con otro en la misma sala y horario.');
+      } else {
+        Object.assign(eventItem, proposed);
+      }
+    }
+
+    dragState = null;
+    hideGuide();
+    rerenderActiveViews();
+  }
+
+  function showGuide(dayColumn, eventItem, conflict) {
+    if (!activeGuide || !dayColumn) return;
+
+    if (activeGuide.parentElement !== dayColumn) dayColumn.appendChild(activeGuide);
+
+    const shownRooms = eventItem.rooms.filter((roomId) => visibleRooms.includes(roomId));
+    if (!shownRooms.length) {
+      hideGuide();
+      return;
+    }
+
+    const firstRoomIndex = Math.min(...shownRooms.map((roomId) => visibleRooms.indexOf(roomId)));
+    const lastRoomIndex = Math.max(...shownRooms.map((roomId) => visibleRooms.indexOf(roomId)));
+    const startMinutes = timeToMinutes(getEventTime(eventItem.start));
+    const endMinutes = timeToMinutes(getEventTime(eventItem.end));
+
+    activeGuide.style.display = 'block';
+    activeGuide.style.top = `${((startMinutes - START_MIN) / 60) * HOUR_HEIGHT + 3}px`;
+    activeGuide.style.height = `${Math.max(42, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 6)}px`;
+    activeGuide.style.left = `calc(${(firstRoomIndex / visibleRooms.length) * 100}% + 4px)`;
+    activeGuide.style.width = `calc(${(((lastRoomIndex - firstRoomIndex) + 1) / visibleRooms.length) * 100}% - 8px)`;
+    activeGuide.classList.toggle('conflict', conflict);
+  }
+
+  function hideGuide() {
+    if (activeGuide) {
+      activeGuide.style.display = 'none';
+      activeGuide.classList.remove('conflict');
+    }
+  }
+
+  function findDayColumnAtPoint(x, y) {
+    const element = document.elementFromPoint(x, y);
+    return element?.closest?.('.modd-day-column') || null;
+  }
+
+  function handleEmptySlotClick(event) {
+    if (event.target.closest('.modd-event-card')) return;
+
+    const dayColumn = event.currentTarget;
+    const rect = dayColumn.getBoundingClientRect();
+    const roomWidth = rect.width / visibleRooms.length;
+    const roomIndex = clamp(Math.floor((event.clientX - rect.left) / roomWidth), 0, visibleRooms.length - 1);
+    const startMinutes = clamp(
+      START_MIN + Math.floor(((event.clientY - rect.top) / HOUR_HEIGHT) * 60 / STEP_MIN) * STEP_MIN,
+      START_MIN,
+      END_MIN - 60
+    );
+
+    openEventModal({
+      date: dayColumn.dataset.date,
+      rooms: [visibleRooms[roomIndex]],
+      startTime: formatMinutes(startMinutes),
+      endTime: formatMinutes(startMinutes + 60)
+    });
+  }
+
+  function initFullCalendar() {
+    const fullCalendarElement = document.getElementById('modd-fullcalendar');
+    if (!fullCalendarElement || typeof FullCalendar === 'undefined') return;
+
+    fullCalendar = new FullCalendar.Calendar(fullCalendarElement, {
+      initialView: 'dayGridMonth',
+      locale: 'es',
+      height: 'auto',
+      editable: true,
+      selectable: true,
+      nowIndicator: true,
+      allDaySlot: false,
+      slotMinTime: '08:00:00',
+      slotMaxTime: '18:00:00',
+      slotDuration: '01:00:00',
+      snapDuration: '01:00:00',
+      defaultTimedEventDuration: '01:00:00',
+      headerToolbar: false,
+      eventClick(info) {
+        const eventItem = events.find((item) => item.id === info.event.id);
+        if (eventItem) openEventModal(eventItem);
+      },
+      dateClick(info) {
+        openEventModal({
+          date: info.dateStr.slice(0, 10),
+          rooms: ['sala1'],
+          startTime: '09:00',
+          endTime: '10:00'
+        });
+      },
+      eventDrop(info) {
+        updateFromFullCalendarChange(info);
+      },
+      eventResize(info) {
+        updateFromFullCalendarChange(info);
+      }
+    });
+
+    fullCalendar.render();
+  }
+
+  function updateFromFullCalendarChange(info) {
+    const eventItem = events.find((item) => item.id === info.event.id);
+    if (!eventItem) return;
+
+    const proposed = {
+      ...eventItem,
+      start: toLocalDateTime(info.event.start),
+      end: toLocalDateTime(info.event.end || addMinutes(info.event.start, 60))
+    };
+
+    if (hasConflict(proposed, proposed.id)) {
+      info.revert();
+      showAlert('No se puede aplicar el cambio: el evento se solapa con otro en la misma sala y horario.');
+      return;
+    }
+
+    Object.assign(eventItem, proposed);
+    renderWeekCalendar();
+    renderFullCalendarEvents();
+  }
+
+  function renderFullCalendarEvents() {
+    if (!fullCalendar) return;
+    fullCalendar.removeAllEvents();
+    filteredEvents().forEach((eventItem) => {
+      fullCalendar.addEvent({
+        id: eventItem.id,
+        title: `${eventItem.title} - ${eventItem.rooms.map((roomId) => findRoom(roomId).name).join(', ')}`,
+        start: eventItem.start,
+        end: eventItem.end,
+        backgroundColor: getEventColor(eventItem),
+        borderColor: getEventColor(eventItem),
+        extendedProps: {
+          rooms: eventItem.rooms,
+          responsible: eventItem.responsible,
+          status: eventItem.status
+        }
+      });
+    });
+  }
+
+  function openEventModal(eventData) {
+    const modal = document.getElementById('event-modal');
+    const title = document.getElementById('event-modal-title');
+    const isExisting = Boolean(eventData.id);
+    const date = eventData.date || getEventDate(eventData) || toISODate(new Date());
+
+    if (!modal) return;
+
+    title.textContent = isExisting ? 'Editar evento' : 'Nuevo evento';
+    document.getElementById('event-id').value = eventData.id || '';
+    document.getElementById('event-title').value = eventData.title || '';
+    document.getElementById('event-responsible').value = eventData.responsible || '';
+    document.getElementById('event-date').value = date;
+    document.getElementById('event-start').value = eventData.startTime || getEventTime(eventData.start) || '09:00';
+    document.getElementById('event-end').value = eventData.endTime || getEventTime(eventData.end) || '10:00';
+    document.getElementById('event-status').value = eventData.status || 'confirmado';
+    document.getElementById('event-notes').value = eventData.notes || '';
+
+    const selectedRooms = eventData.rooms?.length ? eventData.rooms : ['sala1'];
+    document.querySelectorAll('input[name="event-room"]').forEach((input) => {
+      input.checked = selectedRooms.includes(input.value);
+    });
+
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('event-title')?.focus(), 0);
+  }
+
+  function closeEventModal() {
+    const modal = document.getElementById('event-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function saveEventFromModal(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('event-id').value;
+    const date = document.getElementById('event-date').value;
+    const startTime = document.getElementById('event-start').value;
+    const endTime = document.getElementById('event-end').value;
+    const selectedRooms = Array.from(document.querySelectorAll('input[name="event-room"]:checked')).map((input) => input.value);
+
+    if (!selectedRooms.length) {
+      showAlert('Selecciona al menos una sala.');
+      return;
+    }
+
+    if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
+      showAlert('La hora de fin debe ser posterior a la hora de inicio.');
+      return;
+    }
+
+    if (!isWholeHour(startTime) || !isWholeHour(endTime)) {
+      showAlert('Solo se permiten bloques por hora completa. Usa horas como 08:00, 09:00 o 10:00.');
+      return;
+    }
+
+    const proposed = {
+      id: id || `evt-${Date.now()}`,
+      title: document.getElementById('event-title').value.trim(),
+      responsible: document.getElementById('event-responsible').value.trim(),
+      start: `${date}T${startTime}:00`,
+      end: `${date}T${endTime}:00`,
+      rooms: selectedRooms,
+      status: document.getElementById('event-status').value,
+      notes: document.getElementById('event-notes').value.trim()
+    };
+
+    if (hasConflict(proposed, id || proposed.id)) {
+      showAlert('No se puede guardar: el evento se solapa con otro en la misma sala y horario.');
+      return;
+    }
+
+    const currentIndex = events.findIndex((item) => item.id === id);
+    if (currentIndex >= 0) {
+      events[currentIndex] = proposed;
+    } else {
+      events.push(proposed);
+    }
+
+    closeEventModal();
+    showAlert('Evento guardado en el calendario.', 'success');
+    rerenderActiveViews();
+  }
+
+  function hasConflict(proposed, ignoredId) {
+    if (proposed.status === 'cancelado') return false;
+
+    const proposedStart = new Date(proposed.start).getTime();
+    const proposedEnd = new Date(proposed.end).getTime();
+    const proposedDate = getEventDate(proposed);
+
+    return events.some((eventItem) => {
+      if (eventItem.id === ignoredId || eventItem.status === 'cancelado') return false;
+      if (getEventDate(eventItem) !== proposedDate) return false;
+      if (!eventItem.rooms.some((roomId) => proposed.rooms.includes(roomId))) return false;
+
+      const eventStart = new Date(eventItem.start).getTime();
+      const eventEnd = new Date(eventItem.end).getTime();
+      return proposedStart < eventEnd && proposedEnd > eventStart;
+    });
+  }
+
+  function filteredEvents() {
+    return events.filter((eventItem) => {
+      const matchesSearch = !searchTerm
+        || eventItem.title.toLowerCase().includes(searchTerm)
+        || eventItem.responsible.toLowerCase().includes(searchTerm);
+      const matchesRoom = eventItem.rooms.some((roomId) => visibleRooms.includes(roomId));
+      return matchesSearch && matchesRoom;
+    });
+  }
+
+  function rerenderActiveViews() {
+    renderWeekCalendar();
+    renderFullCalendarEvents();
+    if (activeView !== 'week' && fullCalendar) fullCalendar.updateSize();
+  }
+
+  function showAlert(message, type) {
+    const alert = document.getElementById('calendar-alert');
+    if (!alert) return;
+
+    alert.textContent = message;
+    alert.classList.add('show');
+    alert.style.background = type === 'success' ? '#F0FDF4' : '';
+    alert.style.borderColor = type === 'success' ? '#BBF7D0' : '';
+    alert.style.color = type === 'success' ? '#166534' : '';
+
+    window.clearTimeout(alertTimer);
+    alertTimer = window.setTimeout(() => {
+      alert.classList.remove('show');
+      alert.textContent = '';
+      alert.removeAttribute('style');
+    }, 4200);
+  }
+
+  function createSeedEvents() {
+    const dates = Array.from({ length: 7 }, (_, index) => toISODate(addDays(weekStart, index)));
+    return [
+      {
+        id: 'evt-1',
+        title: 'Taller de Innovacion',
+        responsible: 'Dra. Alvarez',
+        start: `${dates[0]}T09:00:00`,
+        end: `${dates[0]}T11:00:00`,
+        rooms: ['sala1'],
+        status: 'confirmado',
+        notes: 'Montaje tipo aula'
+      },
+      {
+        id: 'evt-2',
+        title: 'Revision de solicitudes',
+        responsible: 'Admin UNISON',
+        start: `${dates[1]}T10:00:00`,
+        end: `${dates[1]}T12:00:00`,
+        rooms: ['sala2'],
+        status: 'pendiente',
+        notes: 'Validar capacidad'
+      },
+      {
+        id: 'evt-3',
+        title: 'Conferencia STEM',
+        responsible: 'Ing. Mendez',
+        start: `${dates[2]}T12:00:00`,
+        end: `${dates[2]}T14:00:00`,
+        rooms: ['sala1', 'sala2', 'sala3'],
+        status: 'confirmado',
+        notes: 'Videoconferencia y sonido'
+      },
+      {
+        id: 'evt-4',
+        title: 'Seminario de Investigacion',
+        responsible: 'Mtra. Gonzalez',
+        start: `${dates[3]}T15:00:00`,
+        end: `${dates[3]}T17:00:00`,
+        rooms: ['sala3'],
+        status: 'confirmado',
+        notes: 'Mesa redonda'
+      },
+      {
+        id: 'evt-5',
+        title: 'Presentacion de proyectos',
+        responsible: 'Daniel Alvarez',
+        start: `${dates[4]}T08:00:00`,
+        end: `${dates[4]}T10:00:00`,
+        rooms: ['sala1', 'sala2'],
+        status: 'confirmado',
+        notes: 'Equipo de proyeccion'
+      },
+      {
+        id: 'evt-6',
+        title: 'Clase de Diseno',
+        responsible: 'Coord. Academica',
+        start: `${dates[4]}T11:00:00`,
+        end: `${dates[4]}T12:00:00`,
+        rooms: ['sala3'],
+        status: 'cancelado',
+        notes: 'Cancelado por responsable'
+      }
+    ];
+  }
+
+  function getEventColor(eventItem) {
+    if (eventItem.status === 'cancelado') return '#D5433C';
+    if (eventItem.status === 'pendiente') return '#EBA93B';
+    return findRoom(eventItem.rooms[0])?.color || '#24398A';
+  }
+
+  function findRoom(roomId) {
+    return rooms.find((room) => room.id === roomId) || rooms[0];
+  }
+
+  function getMonday(date) {
+    const copy = new Date(date);
+    const day = copy.getDay();
+    const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+    copy.setDate(diff);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  function addDays(date, days) {
+    const copy = new Date(date);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+  }
+
+  function addMinutes(date, minutes) {
+    const copy = new Date(date);
+    copy.setMinutes(copy.getMinutes() + minutes);
+    return copy;
+  }
+
+  function parseDate(dateString) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  function dayDifference(start, end) {
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return Math.round((endDate - startDate) / 86400000);
+  }
+
+  function toISODate(date) {
+    const copy = new Date(date);
+    const year = copy.getFullYear();
+    const month = String(copy.getMonth() + 1).padStart(2, '0');
+    const day = String(copy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function toLocalDateTime(date) {
+    return `${toISODate(date)}T${formatMinutes(date.getHours() * 60 + date.getMinutes())}:00`;
+  }
+
+  function formatShortDate(date) {
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function formatMinutes(minutes) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  function timeToMinutes(time) {
+    const [hour, minute] = time.split(':').map(Number);
+    return hour * 60 + minute;
+  }
+
+  function isWholeHour(time) {
+    return timeToMinutes(time) % STEP_MIN === 0;
+  }
+
+  function getEventDate(eventItem) {
+    return eventItem?.start?.slice(0, 10);
+  }
+
+  function getEventTime(dateTime) {
+    return dateTime ? dateTime.slice(11, 16) : '';
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function cloneEvent(eventItem) {
+    return {
+      ...eventItem,
+      rooms: [...eventItem.rooms]
+    };
+  }
+
+  function escapeHTML(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+})();
