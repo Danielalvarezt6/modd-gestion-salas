@@ -772,78 +772,7 @@
       });
     });
 
-    <!-- Estadísticas -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Eventos de hoy</div>
-        <div class="stat-number"><span class="highlight-blue" id="stat-events-today">0</span></div>
-        <div class="stat-sub" id="stat-events-today-sub">Sin eventos programados hoy</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Solicitudes pendientes</div>
-        <div class="stat-number"><span class="highlight-gold" id="stat-pending-requests">0</span></div>
-        <div class="stat-sub" id="stat-pending-requests-sub">Sin solicitudes pendientes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Salas ocupadas ahora</div>
-        <div class="stat-number"><span class="highlight-green" id="stat-rooms-now">0</span> / 3</div>
-        <div class="stat-sub" id="stat-rooms-now-sub">Sin salas ocupadas ahora</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Eventos esta semana</div>
-        <div class="stat-number"><span class="highlight-red" id="stat-week-events">0</span></div>
-        <div class="stat-sub" id="stat-week-events-sub">Eventos activos de la semana</div>
-      </div>
-    </div>
 
-
-    <!-- Dos columnas: eventos próximos y solicitudes recientes -->
-    <div class="two-col">
-      <!-- Proximos eventos -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Proximos eventos</h3>
-          <a href="/eventos">Ver todos</a>
-        </div>
-        <div class="panel-body">
-          <table class="table-mini" id="dashboard-events-table">
-            <tbody><tr><td class="empty-state">No hay eventos proximos registrados.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-      <!-- Solicitudes recientes -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Solicitudes recientes</h3>
-          <a href="/solicitudes">Ver todas</a>
-        </div>
-        <div class="panel-body">
-          <table class="table-mini" id="dashboard-requests-table">
-            <tbody><tr><td class="empty-state">No hay solicitudes registradas.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- (Opcional) Más contenido, ejemplo: actividad reciente o gráfico -->
-    <div class="panel" style="margin-bottom: 2rem;">
-      <div class="panel-header">
-        <h3>Ocupacion de salas (hoy)</h3>
-        <a href="/calendario">Ver detalle</a>
-      </div>
-      <div class="panel-body" style="padding: 1.5rem;">
-        <div id="dashboard-occupancy" style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
-          <div class="empty-state">Sin eventos programados hoy.</div>
-        </div>
-      </div>
-    </div>
-  </main>
-</div>
-
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
   document.addEventListener('DOMContentLoaded', function () {
     // Inicializar Lucide
     if (typeof lucide !== 'undefined') lucide.createIcons();

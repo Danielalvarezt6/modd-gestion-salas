@@ -143,6 +143,11 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
         )
 
     asistentes = payload.evento_asistentes or 0
+    if asistentes > 125:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La capacidad máxima de asistentes es de 125."
+        )
     salas_necesarias = max(1, (asistentes + CAPACIDAD_MAXIMA_POR_SALA - 1) // CAPACIDAD_MAXIMA_POR_SALA)
 
     eventos_mismo_dia = db.execute(
