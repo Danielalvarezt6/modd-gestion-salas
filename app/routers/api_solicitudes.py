@@ -9,11 +9,12 @@ de horarios y la asignación automática/híbrida de salas contiguas.
 from datetime import date, datetime, time
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.core.email import enviar_correo_resolucion
 from app.models.salas import Evento, Requerimientos, Sala, Solicitante, Solicitud
 from app.schemas.salas import SolicitudEstadoUpdate, SolicitudEventoCreate, SolicitudResumenOut
 
@@ -409,6 +410,7 @@ async def eliminar_solicitud(id_solicitud: int, db: Session = Depends(get_db)):
 async def actualizar_estado_solicitud(
     id_solicitud: int,
     payload: SolicitudEstadoUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
@@ -430,6 +432,7 @@ async def actualizar_estado_solicitud(
         select(Solicitud)
         .where(Solicitud.id_solicitud == id_solicitud)
         .options(
+            selectinload(Solicitud.solicitante),
             selectinload(Solicitud.eventos).selectinload(Evento.salas),
         )
     ).scalars().first()
@@ -482,6 +485,22 @@ async def actualizar_estado_solicitud(
 
     solicitud.estado = payload.estado
     db.commit()
+
+    if payload.estado in ("aprobada", "rechazada"):
+        evento = solicitud.eventos[0] if solicitud.eventos else None
+        if evento:
+            dia_str = evento.fecha.strftime("%d/%m/%Y")
+            hora_inicio_str = evento.hora_de_inicio.strftime("%H:%M")
+            hora_fin_str = evento.hora_de_termino.strftime("%H:%M")
+            background_tasks.add_task(
+                enviar_correo_resolucion,
+                to_email=solicitud.solicitante.correo,
+                estado=payload.estado,
+                titulo_evento=evento.titulo,
+                dia=dia_str,
+                hora_inicio=hora_inicio_str,
+                hora_fin=hora_fin_str,
+            )
 
     solicitud_actualizada = db.execute(
         select(Solicitud)
