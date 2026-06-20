@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
-from app.models.salas import Evento
+from app.models.salas import Evento, Solicitud
 from app.schemas.salas import ReporteResumenOut
 
 router = APIRouter(prefix="/api/reportes", tags=["Reportes"])
@@ -28,7 +28,11 @@ def _eventos_filtrados(
     fecha_fin: Optional[date] = None,
     sala: Optional[int] = None,
 ):
-    stmt = select(Evento).options(selectinload(Evento.salas), selectinload(Evento.requerimientos))
+    stmt = select(Evento).options(
+        selectinload(Evento.salas),
+        selectinload(Evento.requerimientos),
+        selectinload(Evento.solicitud).selectinload(Solicitud.solicitante),
+    )
 
     if fecha_inicio:
         stmt = stmt.where(Evento.fecha >= fecha_inicio)
@@ -60,6 +64,12 @@ def _resumen_eventos(eventos):
     }
 
 
+def _wrapped_lines(label, value, width_chars=96):
+    text = "" if value is None else str(value)
+    prefix = f"{label}: " if label else ""
+    return wrap(prefix + text, width=width_chars) or [prefix + text]
+
+
 class SimplePDF:
     def __init__(self):
         self.pages: list[str] = []
@@ -67,6 +77,7 @@ class SimplePDF:
         self.y = 780
         self.page_width = 612
         self.left = 46
+        self.right = 566
 
     def _cmd(self, text: str):
         self.lines.append(text)
@@ -81,13 +92,29 @@ class SimplePDF:
         if self.y < 52 + needed:
             self.add_page()
 
-    def text(self, value, x=None, size=10, bold=False, gap=15):
+    def color(self, rgb=(0.08, 0.12, 0.23)):
+        r, g, b = rgb
+        self._cmd(f"{r} {g} {b} rg")
+
+    def rect(self, x, y, width, height, fill=(1, 1, 1), stroke=None):
+        self._cmd(f"{fill[0]} {fill[1]} {fill[2]} rg {x} {y} {width} {height} re f")
+        if stroke:
+            self._cmd(f"{stroke[0]} {stroke[1]} {stroke[2]} RG {x} {y} {width} {height} re S")
+
+    def text(self, value, x=None, size=10, bold=False, gap=15, color=(0.08, 0.12, 0.23)):
         self.ensure_space(gap)
         font = "F2" if bold else "F1"
         safe = _normalize_pdf_text(value)
         x = self.left if x is None else x
+        self.color(color)
         self._cmd(f"BT /{font} {size} Tf {x} {self.y} Td ({safe}) Tj ET")
         self.y -= gap
+
+    def text_at(self, value, x, y, size=10, bold=False, color=(0.08, 0.12, 0.23)):
+        font = "F2" if bold else "F1"
+        safe = _normalize_pdf_text(value)
+        self.color(color)
+        self._cmd(f"BT /{font} {size} Tf {x} {y} Td ({safe}) Tj ET")
 
     def rule(self):
         self.ensure_space(10)
@@ -102,18 +129,48 @@ class SimplePDF:
             if len(safe) > int(width / 4.8):
                 safe = safe[: max(0, int(width / 4.8) - 3)] + "..."
             font = "F2" if bold else "F1"
+            self.color((0.08, 0.12, 0.23))
             self._cmd(f"BT /{font} {size} Tf {x} {self.y} Td ({safe}) Tj ET")
             x += width
         self.y -= gap
 
-    def wrapped_text(self, label, value, x=None, width_chars=96, size=8.5, bold_label=True):
+    def wrapped_text(self, label, value, x=None, width_chars=96, size=8.5, bold_label=True, color=(0.08, 0.12, 0.23)):
         text = "" if value is None else str(value)
         if not text:
             return
         prefix = f"{label}: " if label else ""
         lines = wrap(prefix + text, width=width_chars) or [prefix + text]
         for index, line in enumerate(lines):
-            self.text(line, x=x, size=size, bold=bold_label and index == 0, gap=11)
+            self.text(line, x=x, size=size, bold=bold_label and index == 0, gap=11, color=color)
+
+    def header(self, title, subtitle):
+        self.rect(0, 724, 612, 68, fill=(0.14, 0.22, 0.54))
+        self.rect(0, 724, 612, 5, fill=(0.88, 0.72, 0.24))
+        self.text_at("MODD", 46, 762, size=18, bold=True, color=(1, 1, 1))
+        self.text_at("GESTION DE SALAS", 46, 746, size=8, bold=True, color=(0.88, 0.92, 1))
+        self.text_at(title, 250, 762, size=15, bold=True, color=(1, 1, 1))
+        self.text_at(subtitle, 250, 746, size=9, color=(0.88, 0.92, 1))
+        self.y = 700
+
+    def metric_card(self, x, y, width, label, value, accent=(0.14, 0.22, 0.54)):
+        self.rect(x, y, width, 52, fill=(0.96, 0.97, 0.99), stroke=(0.86, 0.89, 0.94))
+        self.rect(x, y, 4, 52, fill=accent)
+        self.text_at(str(value), x + 14, y + 27, size=18, bold=True, color=accent)
+        self.text_at(label, x + 14, y + 12, size=8.5, bold=True, color=(0.36, 0.42, 0.54))
+
+    def section_title(self, value):
+        self.ensure_space(28)
+        self.text(value, size=12, bold=True, gap=8, color=(0.14, 0.22, 0.54))
+        self.rect(self.left, self.y, 520, 1, fill=(0.88, 0.72, 0.24))
+        self.y -= 16
+
+    def info_line(self, label, value, x, y, width_chars=34):
+        self.text_at(label.upper(), x, y + 12, size=6.8, bold=True, color=(0.40, 0.47, 0.62))
+        lines = wrap(str(value or "Sin dato"), width=width_chars) or ["Sin dato"]
+        cursor = y
+        for line in lines[:3]:
+            self.text_at(line, x, cursor, size=8.3, bold=False, color=(0.08, 0.12, 0.23))
+            cursor -= 10
 
     def build(self) -> bytes:
         if self.lines:
@@ -155,68 +212,88 @@ class SimplePDF:
 def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=None) -> bytes:
     resumen = _resumen_eventos(eventos)
     pdf = SimplePDF()
-    pdf.text("MODD - Gestion de Salas", size=16, bold=True, gap=22)
-    pdf.text(titulo, size=14, bold=True, gap=18)
-    pdf.text(f"Generado: {date.today().isoformat()}", size=9)
-    pdf.text(f"Periodo: {fecha_inicio or 'Sin inicio'} a {fecha_fin or 'Sin fin'}", size=9)
-    pdf.text(f"Sala: {'Todas' if not sala else 'Sala ' + str(sala)}", size=9)
-    pdf.rule()
-    pdf.text("Resumen", size=12, bold=True)
-    pdf.row(
-        ["Eventos", "Asistentes"],
-        [120, 120],
-        bold=True,
-    )
-    pdf.row(
-        [
-            resumen["total_eventos"],
-            resumen["total_asistentes"],
-        ],
-        [120, 120],
-    )
-    pdf.rule()
-    pdf.text("Uso por sala", size=12, bold=True)
-    pdf.row(["Sala", "Eventos", "Asistentes"], [180, 130, 130], bold=True)
+    periodo = f"{fecha_inicio or 'Sin inicio'} a {fecha_fin or 'Sin fin'}"
+    sala_texto = "Todas las salas" if not sala else f"Sala {sala}"
+    pdf.header(titulo, "Documento para informar eventos y preparar salas")
+
+    pdf.text(f"Generado: {date.today().isoformat()}   |   Periodo: {periodo}   |   Filtro: {sala_texto}", size=8.5, gap=24)
+    pdf.metric_card(46, pdf.y - 52, 150, "Eventos", resumen["total_eventos"], accent=(0.14, 0.22, 0.54))
+    pdf.metric_card(214, pdf.y - 52, 150, "Asistentes", resumen["total_asistentes"], accent=(0.09, 0.42, 0.17))
+    salas_usadas = sum(1 for item in resumen["uso_por_sala"] if item["eventos"])
+    pdf.metric_card(382, pdf.y - 52, 150, "Salas con uso", salas_usadas, accent=(0.55, 0.38, 0.00))
+    pdf.y -= 76
+
+    pdf.section_title("Uso por sala")
+    pdf.row(["Sala", "Eventos programados", "Asistentes estimados"], [160, 170, 170], bold=True)
     for item in resumen["uso_por_sala"]:
-        pdf.row([item["sala"], item["eventos"], item["asistentes"]], [180, 130, 130])
-    pdf.rule()
-    pdf.text("Detalle de eventos", size=12, bold=True)
+        pdf.row([item["sala"], item["eventos"], item["asistentes"]], [160, 170, 170])
+
+    pdf.section_title("Detalle operativo de eventos")
     if not eventos:
         pdf.text("No hay eventos para los filtros seleccionados.", size=10)
     for evento in eventos:
         salas = ", ".join(f"Sala {sala.numero_sala}" for sala in evento.salas) or "Sin sala"
-        pdf.ensure_space(92)
-        pdf.row(
-            ["Fecha", "Horario", "Sala", "Asistentes"],
-            [92, 110, 150, 100],
-            bold=True,
-            gap=13,
+        solicitante = evento.solicitud.solicitante if evento.solicitud else None
+        responsable = (
+            f"{solicitante.nombre} {solicitante.apellido}".strip()
+            if solicitante
+            else "Solicitante no asignado"
         )
-        pdf.row(
-            [
-                evento.fecha,
-                f"{evento.hora_de_inicio.strftime('%H:%M')}-{evento.hora_de_termino.strftime('%H:%M')}",
-                salas,
-                evento.no_de_asistentes or 0,
-            ],
-            [92, 110, 150, 100],
-            gap=14,
-        )
-        pdf.wrapped_text("Evento", evento.titulo, width_chars=98, size=9)
-        pdf.wrapped_text("Descripcion", evento.descripcion, width_chars=98, size=8.2, bold_label=False)
+        correo = solicitante.correo if solicitante else "Sin correo"
+        telefono = solicitante.no_de_telefono if solicitante else "Sin telefono"
+        horario = f"{evento.hora_de_inicio.strftime('%H:%M')} - {evento.hora_de_termino.strftime('%H:%M')}"
+
+        req = evento.requerimientos
+        preparacion = []
+        if req and req.acomodo:
+            preparacion.append(f"Acomodo: {req.acomodo}")
+        if req and req.equipo_de_sonido:
+            preparacion.append("Equipo de sonido")
+        if req and req.cafeteria:
+            preparacion.append("Cafeteria")
+        if req and req.videoconferencia:
+            preparacion.append("Videoconferencia")
+        preparacion_texto = ", ".join(preparacion) if preparacion else "Sin requerimientos especiales"
+
+        descripcion_lineas = _wrapped_lines("Descripcion", evento.descripcion or "Sin descripcion", width_chars=88)
+        preparacion_lineas = _wrapped_lines("Preparacion de sala", preparacion_texto, width_chars=88)
+        contenido_alto = (len(descripcion_lineas) + len(preparacion_lineas)) * 11
+        card_height = max(178, 126 + contenido_alto)
+
+        pdf.ensure_space(card_height + 18)
+        card_top = pdf.y
+        card_bottom = card_top - card_height
+        pdf.rect(46, card_bottom, 520, card_height + 6, fill=(0.98, 0.99, 1), stroke=(0.84, 0.87, 0.93))
+        pdf.rect(46, card_bottom, 6, card_height + 6, fill=(0.14, 0.22, 0.54))
+        pdf.text_at(str(evento.titulo), 62, card_top - 18, size=12, bold=True, color=(0.05, 0.09, 0.20))
+        pdf.text_at(f"{evento.fecha}  |  {horario}", 62, card_top - 34, size=9, bold=True, color=(0.14, 0.22, 0.54))
+
+        pdf.info_line("Sala", salas, 62, card_top - 62, width_chars=24)
+        pdf.info_line("Asistentes", evento.no_de_asistentes or 0, 190, card_top - 62, width_chars=18)
+        pdf.info_line("Responsable / solicitante", responsable, 300, card_top - 62, width_chars=34)
+        pdf.info_line("Contacto", f"{correo} | {telefono}", 62, card_top - 104, width_chars=58)
+
+        pdf.y = card_top - 116
+        for index, line in enumerate(descripcion_lineas):
+            pdf.text(line, x=62, size=8.2, bold=index == 0, gap=11)
+        pdf.y -= 2
+        for index, line in enumerate(preparacion_lineas):
+            pdf.text(line, x=62, size=8.2, bold=index == 0, gap=11)
         if evento.requerimientos:
-            extras = []
-            if evento.requerimientos.acomodo:
-                extras.append(f"Acomodo: {evento.requerimientos.acomodo}")
-            if evento.requerimientos.equipo_de_sonido:
-                extras.append("Equipo de sonido")
-            if evento.requerimientos.cafeteria:
-                extras.append("Cafeteria")
-            if evento.requerimientos.videoconferencia:
-                extras.append("Videoconferencia")
-            if extras:
-                pdf.wrapped_text("Requerimientos", " | ".join(extras), width_chars=98, size=8.2, bold_label=False)
-        pdf.rule()
+            checklist = [
+                ("Acomodo", bool(evento.requerimientos.acomodo)),
+                ("Audio", bool(evento.requerimientos.equipo_de_sonido)),
+                ("Cafeteria", bool(evento.requerimientos.cafeteria)),
+                ("Videoconferencia", bool(evento.requerimientos.videoconferencia)),
+            ]
+            x = 62
+            y = max(pdf.y - 4, card_top - 144)
+            for label, enabled in checklist:
+                mark = "SI" if enabled else "NO"
+                color = (0.09, 0.42, 0.17) if enabled else (0.55, 0.58, 0.66)
+                pdf.text_at(f"{label}: {mark}", x, y, size=7.2, bold=True, color=color)
+                x += 115
+        pdf.y = card_bottom - 14
     return pdf.build()
 
 

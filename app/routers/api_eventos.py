@@ -1,3 +1,5 @@
+from datetime import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select  # <-- Importar select
@@ -9,6 +11,8 @@ from app.schemas.salas import EventoOut, EventoCreate, EventoUpdate
 
 router = APIRouter(prefix="/api/eventos", tags=["Eventos"])
 CAPACIDAD_MAXIMA_POR_SALA = 40
+HORA_APERTURA = time(8, 0)
+HORA_CIERRE = time(20, 0)
 
 
 def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_ignorado: int | None = None) -> List[Sala]:
@@ -16,6 +20,16 @@ def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="La hora de termino debe ser posterior a la hora de inicio.",
+        )
+    if evento.hora_de_inicio < HORA_APERTURA or evento.hora_de_termino > HORA_CIERRE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El horario permitido es unicamente de 08:00 a 20:00.",
+        )
+    if evento.hora_de_inicio.minute != 0 or evento.hora_de_termino.minute != 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Solo se permiten bloques por hora completa.",
         )
 
     salas_ids = evento.salas_ids or []

@@ -46,8 +46,14 @@
     </header>
 
     <section class="admin-stat-grid" aria-label="Resumen de eventos">
-      <div class="admin-stat-card"><div class="admin-stat-value">0</div><div class="admin-stat-label">Total eventos</div></div>
-      <div class="admin-stat-card" style="--stat-color:#8a6200"><div class="admin-stat-value">0</div><div class="admin-stat-label">Esta semana</div></div>
+      <button class="admin-stat-card is-selected" data-event-period="todos" type="button">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Total eventos</div>
+      </button>
+      <button class="admin-stat-card" data-event-period="semana" type="button" style="--stat-color:#8a6200">
+        <div class="admin-stat-value">0</div>
+        <div class="admin-stat-label">Esta semana</div>
+      </button>
     </section>
 
     <section class="admin-filter-row" aria-label="Filtros de eventos">
@@ -177,6 +183,7 @@
     const room = document.getElementById('room-filter');
     const tableBody = document.querySelector('#events-table tbody');
     let rows = Array.from(document.querySelectorAll('#events-table tbody tr'));
+    let activePeriod = 'todos';
 
     toggle?.addEventListener('click', function () {
       sidebar.classList.toggle('open');
@@ -192,15 +199,26 @@
     function applyFilters() {
       const term = (search.value || '').trim().toLowerCase();
       rows.forEach(function (row) {
-        const roomMatch = room.value === 'todas' || row.dataset.room === room.value;
+        const roomIds = (row.dataset.roomIds || '').split(',').filter(Boolean);
+        const roomMatch = room.value === 'todas' || roomIds.includes(room.value.replace('sala', ''));
+        const periodMatch = activePeriod === 'todos' || isDateInCurrentWeek(row.dataset.date);
         const searchMatch = !term || row.dataset.search.includes(term);
-        row.style.display = roomMatch && searchMatch ? '' : 'none';
+        row.style.display = roomMatch && periodMatch && searchMatch ? '' : 'none';
       });
     }
 
     loadEventsFromApi();
 
     [search, room].forEach(function (item) { item.addEventListener('input', applyFilters); item.addEventListener('change', applyFilters); });
+    document.querySelectorAll('[data-event-period]').forEach(function (card) {
+      card.addEventListener('click', function () {
+        activePeriod = card.dataset.eventPeriod || 'todos';
+        document.querySelectorAll('[data-event-period]').forEach(function (item) {
+          item.classList.toggle('is-selected', item === card);
+        });
+        applyFilters();
+      });
+    });
     const modal = document.getElementById('event-detail-modal');
     const detailForm = document.getElementById('event-detail-form');
     let activeRow = null;
@@ -376,7 +394,9 @@
         const select = document.getElementById(id);
         if (!select) return;
         select.innerHTML = '';
-        for (let hour = 8; hour <= 20; hour += 1) {
+        const firstHour = id === 'detail-end' ? 9 : 8;
+        const lastHour = id === 'detail-end' ? 20 : 19;
+        for (let hour = firstHour; hour <= lastHour; hour += 1) {
           const value = `${String(hour).padStart(2, '0')}:00`;
           const option = document.createElement('option');
           option.value = value;
@@ -389,17 +409,20 @@
     function updateEventStats(events) {
       const values = document.querySelectorAll('.admin-stat-card .admin-stat-value');
       if (!values.length) return;
+      values[0].textContent = events.length;
+      values[1].textContent = events.filter((event) => isDateInCurrentWeek(event.fecha)).length;
+    }
+
+    function isDateInCurrentWeek(value) {
+      if (!value) return false;
       const today = new Date();
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
       weekStart.setHours(0, 0, 0, 0);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
-      values[0].textContent = events.length;
-      values[1].textContent = events.filter((event) => {
-        const date = new Date(event.fecha + 'T00:00:00');
-        return date >= weekStart && date < weekEnd;
-      }).length;
+      const date = new Date(value + 'T00:00:00');
+      return date >= weekStart && date < weekEnd;
     }
 
     function requirementsLayout(item) {
@@ -417,6 +440,10 @@
 
     function formatDate(value) {
       return capitalize(new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }));
+    }
+
+    function capitalize(value) {
+      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
     }
 
     function escapeHTML(value) {
