@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,6 +11,8 @@ from app.schemas.salas import SolicitudEstadoUpdate, SolicitudEventoCreate, Soli
 
 router = APIRouter(prefix="/api/solicitudes", tags=["Solicitudes"])
 CAPACIDAD_MAXIMA_POR_SALA = 40
+HORA_APERTURA = time(8, 0)
+HORA_CIERRE = time(20, 0)
 
 
 def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
@@ -40,43 +42,25 @@ def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
     )
 
 
-def _salas_payload(payload: SolicitudEventoCreate) -> list[int]:
-    salas_ids = payload.salas_ids or ([payload.sala_id] if payload.sala_id is not None else [])
-    return sorted({int(sala_id) for sala_id in salas_ids if sala_id is not None})
-
-
 def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_evento_ignorado: int | None = None):
     if payload.evento_inicio >= payload.evento_fin:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="La hora de fin debe ser posterior a la hora de inicio.",
         )
-
-    salas_ids = _salas_payload(payload)
-    if not salas_ids:
+    if payload.evento_inicio < HORA_APERTURA or payload.evento_fin > HORA_CIERRE:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Selecciona al menos una sala.",
+            detail="El horario permitido es unicamente de 08:00 a 20:00.",
         )
-
-    salas = db.execute(select(Sala).where(Sala.numero_sala.in_(salas_ids))).scalars().all()
-    if len(salas) != len(salas_ids):
+    if payload.evento_inicio.minute != 0 or payload.evento_fin.minute != 0:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Una o mas salas seleccionadas no existen.",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Solo se permiten bloques por hora completa.",
         )
 
     asistentes = payload.evento_asistentes or 0
-    capacidad_total = CAPACIDAD_MAXIMA_POR_SALA * len(salas_ids)
-    if asistentes > capacidad_total:
-        salas_necesarias = (asistentes + CAPACIDAD_MAXIMA_POR_SALA - 1) // CAPACIDAD_MAXIMA_POR_SALA
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"El cupo maximo es de {CAPACIDAD_MAXIMA_POR_SALA} personas por sala. "
-                f"Para {asistentes} asistentes selecciona al menos {salas_necesarias} salas."
-            ),
-        )
+    salas_necesarias = max(1, (asistentes + CAPACIDAD_MAXIMA_POR_SALA - 1) // CAPACIDAD_MAXIMA_POR_SALA)
 
     eventos_mismo_dia = db.execute(
         select(Evento)
@@ -84,35 +68,51 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
         .where(Evento.fecha == payload.evento_fecha)
         .where((Solicitud.estado.is_(None)) | (Solicitud.estado != "rechazada"))
     ).scalars().all()
+
     salas_ocupadas = set()
-    hay_conflicto = False
     for evento in eventos_mismo_dia:
         if id_evento_ignorado is not None and evento.id_evento == id_evento_ignorado:
             continue
         if payload.evento_inicio < evento.hora_de_termino and payload.evento_fin > evento.hora_de_inicio:
             for item in evento.salas:
                 salas_ocupadas.add(item.numero_sala)
-                if item.numero_sala in salas_ids:
-                    hay_conflicto = True
 
-    if hay_conflicto:
-        todas_las_salas = db.execute(select(Sala).order_by(Sala.numero_sala)).scalars().all()
-        salas_disponibles = [
-            f"Sala {item.numero_sala}"
-            for item in todas_las_salas
-            if item.numero_sala not in salas_ocupadas
-        ]
-        sugerencia = (
-            f" Puedes usar {', '.join(salas_disponibles)} en ese horario."
-            if salas_disponibles
-            else " No hay otra sala disponible en ese bloque."
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"No se puede crear la solicitud: el evento se solapa con otro en la misma sala y horario.{sugerencia}",
-        )
+    todas_las_salas = db.execute(select(Sala).order_by(Sala.numero_sala)).scalars().all()
+    salas_disponibles = [sala for sala in todas_las_salas if sala.numero_sala not in salas_ocupadas]
 
-    return salas
+    salas_ids = payload.salas_ids or []
+    
+    if salas_ids:
+        # Modo Administradora (Manual)
+        if len(salas_ids) < salas_necesarias:
+            disponibles_str = ", ".join(f"Sala {s.numero_sala}" for s in salas_disponibles)
+            sugerencia = f" Quedan disponibles en ese horario: {disponibles_str}." if disponibles_str else " No hay más salas disponibles."
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Para {asistentes} asistentes necesitas al menos {salas_necesarias} salas.{sugerencia}"
+            )
+            
+        salas_asignadas = [sala for sala in todas_las_salas if sala.numero_sala in salas_ids]
+        if len(salas_asignadas) != len(set(salas_ids)):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Una o mas salas seleccionadas no existen.")
+            
+        salas_en_conflicto = [sala.numero_sala for sala in salas_asignadas if sala.numero_sala in salas_ocupadas]
+        if salas_en_conflicto:
+            disponibles_str = ", ".join(f"Sala {s.numero_sala}" for s in salas_disponibles)
+            sugerencia = f" Puedes usar {disponibles_str} en ese horario." if disponibles_str else " No hay salas disponibles en ese bloque."
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Las salas solicitadas están ocupadas en ese horario.{sugerencia}"
+            )
+        return salas_asignadas
+    else:
+        # Modo Google Forms (Automático)
+        if len(salas_disponibles) < salas_necesarias:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Se requieren {salas_necesarias} salas para {asistentes} asistentes, pero solo hay {len(salas_disponibles)} disponibles en ese horario."
+            )
+        return salas_disponibles[:salas_necesarias]
 
 
 def _load_solicitud(db: Session, id_solicitud: int) -> Solicitud | None:

@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr
 from datetime import date, time
 from typing import Optional, List
 
@@ -104,7 +104,6 @@ class SolicitudResumenOut(BaseModel):
     videoconferencia: Optional[bool] = False
     salas: List[SalaOut] = []
 
-
 class SolicitudEstadoUpdate(BaseModel):
     estado: str
 
@@ -120,8 +119,7 @@ class SolicitudEventoCreate(BaseModel):
     evento_inicio: time
     evento_fin: time
     evento_asistentes: Optional[int] = 0
-    sala_id: Optional[int] = None
-    salas_ids: Optional[List[int]] = None
+    salas_ids: Optional[List[int]] = []
     acomodo: Optional[str] = None
     equipo_de_sonido: Optional[bool] = False
     cafeteria: Optional[bool] = False

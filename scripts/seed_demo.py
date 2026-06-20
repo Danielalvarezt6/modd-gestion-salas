@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 from datetime import date, time
 
@@ -8,6 +8,8 @@ if PROJECT_ROOT not in sys.path:
 
 from app.core.database import SessionLocal
 from app.models.salas import Evento, Requerimientos, Sala, Solicitante, Solicitud, sala_evento
+from app.models.usuarios import Usuario
+from app.core.security import get_password_hash
 
 
 SALAS = (
@@ -152,8 +154,20 @@ def seed():
             )
             db.add(evento)
 
+        admin_email = "admin@unison.mx"
+        admin = db.query(Usuario).filter(Usuario.correo == admin_email).first()
+        if not admin:
+            nuevo_admin = Usuario(
+                correo=admin_email,
+                hashed_password=get_password_hash("modd2026"),
+                is_active=True,
+                is_admin=True,
+            )
+            db.add(nuevo_admin)
+
         db.commit()
         print(f"Base de datos reiniciada y llenada con {len(DEMO_DATA)} eventos demo de MODD.")
+        print(f"Usuario administrador asegurado: {admin_email} / modd2026")
     except Exception:
         db.rollback()
         raise

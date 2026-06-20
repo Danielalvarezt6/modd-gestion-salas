@@ -314,7 +314,9 @@
         const select = createForm?.elements[name];
         if (!select) return;
         select.innerHTML = '';
-        for (let hour = 8; hour <= 20; hour += 1) {
+        const firstHour = name === 'evento_fin' ? 9 : 8;
+        const lastHour = name === 'evento_fin' ? 20 : 19;
+        for (let hour = firstHour; hour <= lastHour; hour += 1) {
           const value = `${String(hour).padStart(2, '0')}:00`;
           const option = document.createElement('option');
           option.value = value;
@@ -389,11 +391,6 @@
         showToast('Selecciona al menos una sala.');
         return;
       }
-      if (attendees > selectedRooms.length * 40) {
-        const neededRooms = Math.ceil(attendees / 40);
-        showToast(`El cupo maximo es de 40 personas por sala. Para ${attendees} asistentes selecciona al menos ${neededRooms} salas.`);
-        return;
-      }
       const payload = {
         solicitante_nombre: formData.get('solicitante_nombre'),
         solicitante_apellido: formData.get('solicitante_apellido'),
@@ -453,7 +450,7 @@
           const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
           const salaIds = item.salas.map(function (sala) { return sala.numero_sala; });
           const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
-          const fecha = item.evento_fecha ? new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }) : 'Sin fecha';
+          const fecha = item.evento_fecha ? capitalize(new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' })) : 'Sin fecha';
           const requerimientos = formatRequirements(item);
           const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
           const firstName = requesterFirstName(item);

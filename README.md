@@ -10,7 +10,8 @@ MODD es una aplicacion web para administrar solicitudes, eventos, calendario y r
 - Deteccion de solapamientos por sala, fecha y horario.
 - Sugerencia de salas disponibles cuando un horario se solapa.
 - Arrastre  y redimension de eventos por horas y por salas.
-- Solicitudes con estados `pendiente`, `aprobada` y `rechazada`.
+- Asignación inteligente e híbrida de salas (selección manual con validación de cupo o automática para integraciones externas como Google Forms).
+- Edición, aprobación y rechazo de solicitudes de sala.
 - Reportes PDF semanal, mensual, por sala y personalizado.
 - Modo claro/oscuro en toda la aplicacion.
 
@@ -143,6 +144,7 @@ Las rutas internas requieren sesion activa.
 - `DELETE /api/eventos/{id_evento}`
 - `GET /api/solicitudes/`
 - `POST /api/solicitudes/`
+- `PUT /api/solicitudes/{id_solicitud}`
 - `PATCH /api/solicitudes/{id_solicitud}/estado`
 - `DELETE /api/solicitudes/{id_solicitud}`
 - `GET /api/reportes/resumen`

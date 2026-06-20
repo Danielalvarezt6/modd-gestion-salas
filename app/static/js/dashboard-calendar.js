@@ -7,7 +7,7 @@
 
   const dayNames = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
   const START_MIN = 8 * 60;
-  const END_MIN = 18 * 60;
+  const END_MIN = 20 * 60;
   const STEP_MIN = 60;
   const HOUR_HEIGHT = 74;
 
@@ -444,7 +444,7 @@
       nowIndicator: false,
       allDaySlot: false,
       slotMinTime: '08:00:00',
-      slotMaxTime: '18:00:00',
+      slotMaxTime: '20:00:00',
       slotDuration: '01:00:00',
       snapDuration: '01:00:00',
       defaultTimedEventDuration: '01:00:00',
@@ -590,6 +590,11 @@
 
     if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
       showAlert('La hora de fin debe ser posterior a la hora de inicio.');
+      return;
+    }
+
+    if (timeToMinutes(startTime) < START_MIN || timeToMinutes(endTime) > END_MIN) {
+      showAlert('El horario permitido es unicamente de 08:00 a 20:00.');
       return;
     }
 
