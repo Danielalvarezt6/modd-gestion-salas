@@ -772,55 +772,6 @@
       });
     });
 
-
-  document.addEventListener('DOMContentLoaded', function () {
-    // Inicializar Lucide
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    const dashboardDate = document.getElementById('dashboard-date');
-    if (dashboardDate) {
-      dashboardDate.textContent = new Date().toLocaleDateString('es-MX');
-    }
-
-    // Sidebar toggle en móvil
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    const toggleBtn = document.getElementById('sidebar-toggle');
-
-    function openSidebar() {
-      sidebar.classList.add('open');
-      overlay.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeSidebar() {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (sidebar.classList.contains('open')) {
-          closeSidebar();
-        } else {
-          openSidebar();
-        }
-      });
-    }
-
-    overlay.addEventListener('click', closeSidebar);
-
-    // Cerrar sidebar al hacer click en un enlace (móvil)
-    document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
-      link.addEventListener('click', function () {
-        if (window.innerWidth <= 768) {
-          closeSidebar();
-        }
-      });
-    });
-
     // Cerrar sesión: redirigir a login
     document.getElementById('logout-link')?.addEventListener('click', function (e) {
       e.preventDefault();
@@ -978,5 +929,6 @@
       const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
       return labels[status] || status;
     }
+  });
   </script>
 {% endblock %}
