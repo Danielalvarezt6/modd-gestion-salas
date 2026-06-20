@@ -929,6 +929,10 @@
       const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
       return labels[status] || status;
     }
+
+    function escapeHTML(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
   });
   </script>
 {% endblock %}

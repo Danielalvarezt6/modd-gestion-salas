@@ -14,6 +14,7 @@ El sistema fue desarrollado con un backend robusto basado en **FastAPI** y una i
 - **Modo Oscuro/Claro**: Soporte completo de temas que se adaptan a las preferencias del sistema del usuario, incluyendo componentes dinámicos como el calendario y los PDF exportables.
 
 ### Para Administradores
+- **Notificaciones por Correo**: Envío automático de resoluciones (aprobaciones o rechazos) vía email utilizando procesamiento asíncrono (`BackgroundTasks`) sin retrasar la respuesta del servidor.
 - **Calendario Interactivo**: Visualización de eventos y disponibilidades en formato semanal, mensual y diario utilizando `FullCalendar`.
 - **Drag & Drop Avanzado**: Ajuste dinámico de la duración de los eventos y la sala asignada arrastrando los bloques dentro del calendario, con cálculos de disponibilidad en tiempo real.
 - **Detección Inteligente de Solapamientos**: El sistema previene colisiones de horarios, validando sala, fecha y hora. Si hay un conflicto, sugiere automáticamente salas alternativas disponibles.
@@ -55,7 +56,7 @@ Tablas involucradas:
 modd-gestion-salas/
 ├── alembic/                # Configuraciones y scripts de migraciones DB
 ├── app/
-│   ├── core/               # Núcleo: Configuración de entorno, conexión a BD, Seguridad (JWT)
+│   ├── core/               # Núcleo: Configuración de entorno, conexión a BD, Seguridad (JWT), Emails
 │   ├── models/             # ORM: Modelos SQLAlchemy que mapean las tablas en BD
 │   ├── routers/            # Controladores: 
 │   │   ├── views.py        # ➔ Renderizado SSR de Jinja2
@@ -91,7 +92,7 @@ venv\Scripts\activate   # En Windows
 pip install -r requirements.txt
 ```
 
-### 3. Configuración de Base de Datos
+### 3. Configuración de Base de Datos y Correo
 En tu motor de PostgreSQL, crea la base de datos y un usuario (opcional):
 ```sql
 CREATE DATABASE modd_db;
@@ -105,6 +106,11 @@ DATABASE_URL=postgresql://modd_user:tu_password@localhost:5432/modd_db
 SECRET_KEY=clave_secreta_para_firmar_jwt
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=gestiondesalasmodd@gmail.com
+SMTP_PASSWORD=tu_contraseña_de_aplicacion_gmail
+FROM_EMAIL=gestiondesalasmodd@gmail.com
 ```
 
 ### 4. Migraciones y Población de Datos
