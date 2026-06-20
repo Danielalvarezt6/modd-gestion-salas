@@ -933,6 +933,45 @@
     function escapeHTML(value) {
       return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
     }
+
+    function localDateKey(date) {
+      const d = new Date(date);
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().split('T')[0];
+    }
+
+    function minutesFromDate(date) {
+      return date.getHours() * 60 + date.getMinutes();
+    }
+
+    function minutesFromTime(timeString) {
+      if (!timeString) return 0;
+      const parts = timeString.split(':');
+      return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    }
+
+    function startOfWeek(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    }
+
+    function formatNumber(num) {
+      return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      return timeStr.substring(0, 5);
+    }
   });
   </script>
 {% endblock %}

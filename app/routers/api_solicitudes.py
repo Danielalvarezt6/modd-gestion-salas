@@ -284,7 +284,16 @@ def _delete_solicitud_tree(db: Session, solicitud: Solicitud):
 
 @router.post("/", response_model=SolicitudResumenOut, status_code=status.HTTP_201_CREATED)
 async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(get_db)):
-    salas = _validar_solape_evento(payload, db)
+    advertencia = None
+    try:
+        salas = _validar_solape_evento(payload, db)
+    except HTTPException as e:
+        if e.status_code in (status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_ENTITY):
+            salas = []
+            advertencia = f"⚠️ ALERTA DEL SISTEMA: {e.detail}"
+        else:
+            raise
+
     solicitante = db.query(Solicitante).filter(Solicitante.correo == payload.solicitante_correo).first()
     if not solicitante:
         solicitante = Solicitante(correo=payload.solicitante_correo)
@@ -306,9 +315,15 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
         cafeteria=payload.cafeteria,
         videoconferencia=payload.videoconferencia,
     )
+    
+    descripcion_final = payload.evento_descripcion or ""
+    if advertencia:
+        separador = "\n\n" if descripcion_final else ""
+        descripcion_final += f"{separador}{advertencia}"
+
     evento = Evento(
         titulo=payload.evento_titulo,
-        descripcion=payload.evento_descripcion,
+        descripcion=descripcion_final,
         fecha=payload.evento_fecha,
         hora_de_inicio=payload.evento_inicio,
         hora_de_termino=payload.evento_fin,
