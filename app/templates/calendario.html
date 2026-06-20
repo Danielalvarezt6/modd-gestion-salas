@@ -344,6 +344,8 @@
       <div id="fullcalendar-view" class="modd-fullcalendar-wrap hidden">
         <div id="modd-fullcalendar"></div>
       </div>
+
+      <div id="mobile-calendar-view" class="modd-mobile-view hidden"></div>
     </section>
   </main>
 </div>
@@ -453,6 +455,80 @@
       <button type="submit" class="modd-primary-action">Guardar solicitud</button>
     </div>
   </form>
+</div>
+
+<!-- Event View Read-Only Modal -->
+<div id="event-view-modal" class="modd-modal hidden" aria-hidden="true">
+  <div class="modd-modal-backdrop" data-view-modal-close></div>
+  <div class="modd-event-view" aria-label="Detalles del evento">
+    <div class="modd-view-header">
+      <div class="modd-view-header-title">
+        <h3 id="view-title">Título del Evento</h3>
+        <p id="view-subtitle">Día • Sala • Horario</p>
+      </div>
+      <div class="modd-view-actions">
+        <button type="button" class="modd-action-btn edit-btn" id="view-edit-btn">
+          <i data-lucide="pencil" class="w-4 h-4"></i> Editar
+        </button>
+        <button type="button" class="modd-action-btn delete-btn" id="view-delete-btn">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar
+        </button>
+        <button type="button" class="modd-icon-button close-btn" data-view-modal-close aria-label="Cerrar">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="modd-view-body">
+      <div class="modd-view-row">
+        <div class="modd-view-icon"><i data-lucide="user" class="w-5 h-5"></i></div>
+        <div class="modd-view-info">
+          <small>Solicitante</small>
+          <span id="view-requester">Nombre</span>
+        </div>
+      </div>
+      <div class="modd-view-row">
+        <div class="modd-view-icon"><i data-lucide="clock" class="w-5 h-5"></i></div>
+        <div class="modd-view-info">
+          <small>Horario</small>
+          <span id="view-time">Día, Hora</span>
+        </div>
+      </div>
+      <div class="modd-view-row">
+        <div class="modd-view-icon"><i data-lucide="door-open" class="w-5 h-5"></i></div>
+        <div class="modd-view-info">
+          <small>Sala</small>
+          <span id="view-rooms">Salas</span>
+        </div>
+      </div>
+      <div class="modd-view-row">
+        <div class="modd-view-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
+        <div class="modd-view-info">
+          <small>Asistentes</small>
+          <span id="view-attendees">0 personas</span>
+        </div>
+      </div>
+      <div class="modd-view-row" id="view-layout-container">
+        <div class="modd-view-icon"><i data-lucide="layout-grid" class="w-5 h-5"></i></div>
+        <div class="modd-view-info">
+          <small>Acomodo</small>
+          <span id="view-layout">No especificado</span>
+        </div>
+      </div>
+      
+      <div class="modd-view-requirements" id="view-req-container">
+        <small>Requisitos</small>
+        <div class="modd-req-tags" id="view-requirements">
+          <!-- Tags go here -->
+        </div>
+      </div>
+      
+      <div class="modd-view-notes" id="view-notes-container">
+        <small>Descripción</small>
+        <p id="view-notes"></p>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

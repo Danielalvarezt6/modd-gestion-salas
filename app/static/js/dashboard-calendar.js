@@ -121,10 +121,34 @@
       button.addEventListener('click', closeEventModal);
     });
 
+    document.querySelectorAll('[data-view-modal-close]').forEach((button) => {
+      button.addEventListener('click', closeEventViewModal);
+    });
+
     document.getElementById('event-form')?.addEventListener('submit', saveEventFromModal);
     document.getElementById('event-delete-button')?.addEventListener('click', deleteEventFromModal);
+    
+    // View Modal actions
+    document.getElementById('view-edit-btn')?.addEventListener('click', () => {
+      const id = document.getElementById('event-id').value;
+      if (id) {
+        closeEventViewModal();
+        const eventItem = events.find((item) => item.id === id);
+        if (eventItem) openEventModal(eventItem);
+      }
+    });
+
+    document.getElementById('view-delete-btn')?.addEventListener('click', () => {
+      // The delete action will use the same ID stored in the hidden input
+      deleteEventFromModal();
+      closeEventViewModal();
+    });
+
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeEventModal();
+      if (event.key === 'Escape') {
+        closeEventModal();
+        closeEventViewModal();
+      }
     });
   }
 
@@ -137,6 +161,19 @@
 
     const weekView = document.getElementById('week-calendar-view');
     const fullView = document.getElementById('fullcalendar-view');
+    const mobileView = document.getElementById('mobile-calendar-view');
+
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      weekView?.classList.add('hidden');
+      fullView?.classList.add('hidden');
+      mobileView?.classList.remove('hidden');
+      if (typeof renderMobileCalendar === 'function') renderMobileCalendar(view);
+      return;
+    }
+
+    mobileView?.classList.add('hidden');
 
     if (view === 'week') {
       weekView?.classList.remove('hidden');
@@ -262,7 +299,7 @@
 
     card.addEventListener('dblclick', (event) => {
       event.stopPropagation();
-      openEventModal(eventItem);
+      openEventViewModal(eventItem);
     });
 
     card.addEventListener('pointerdown', (event) => startPointerInteraction(event, eventItem, dayColumn));
@@ -452,7 +489,7 @@
       eventDidMount(info) {
         info.el.addEventListener('dblclick', () => {
           const eventItem = events.find((item) => item.id === info.event.id);
-          if (eventItem) openEventModal(eventItem);
+          if (eventItem) openEventViewModal(eventItem);
         });
       },
       eventDrop(info) {
@@ -562,6 +599,83 @@
     if (!modal || modal.classList.contains('hidden')) return;
 
     hideModalAlert();
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function openEventViewModal(eventData) {
+    const modal = document.getElementById('event-view-modal');
+    if (!modal) return;
+
+    // Set ID in the hidden input of the form, so Edit/Delete buttons know which event it is
+    document.getElementById('event-id').value = eventData.id || '';
+
+    // Title and subtitle
+    document.getElementById('view-title').textContent = eventData.title || 'Evento';
+    const dateStr = getEventDate(eventData) || toISODate(new Date());
+    const dateObj = parseDate(dateStr);
+    const dayName = dateObj.toLocaleString('es-ES', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase());
+    const roomsStr = (eventData.rooms || []).map(r => findRoom(r).name).join(', ');
+    const startStr = getEventTime(eventData.start) || '00:00';
+    const endStr = getEventTime(eventData.end) || '00:00';
+    document.getElementById('view-subtitle').textContent = `${dayName} • ${roomsStr} • ${startStr} – ${endStr}`;
+
+    // Rows
+    document.getElementById('view-requester').textContent = eventData.responsible || 'No asignado';
+    const durationHours = (timeToMinutes(endStr) - timeToMinutes(startStr)) / 60;
+    const durationStr = durationHours > 0 ? ` (${durationHours}h)` : '';
+    document.getElementById('view-time').textContent = `${dayName}, ${startStr} – ${endStr}${durationStr}`;
+    document.getElementById('view-rooms').textContent = roomsStr;
+    document.getElementById('view-attendees').textContent = `${eventData.attendees || 0} personas`;
+    
+    // Layout
+    const layoutContainer = document.getElementById('view-layout-container');
+    const layout = eventData.requirements?.acomodo || '';
+    if (layout) {
+      layoutContainer.style.display = 'flex';
+      document.getElementById('view-layout').textContent = layout;
+    } else {
+      layoutContainer.style.display = 'none';
+    }
+
+    // Requirements Tags
+    const reqContainer = document.getElementById('view-req-container');
+    const reqDiv = document.getElementById('view-requirements');
+    reqDiv.innerHTML = '';
+    let hasReqs = false;
+    if (eventData.requirements?.equipo_de_sonido) {
+      reqDiv.innerHTML += `<span>Audio</span>`;
+      hasReqs = true;
+    }
+    if (eventData.requirements?.cafeteria) {
+      reqDiv.innerHTML += `<span>Cafetería</span>`;
+      hasReqs = true;
+    }
+    if (eventData.requirements?.videoconferencia) {
+      reqDiv.innerHTML += `<span>Video / Pantalla</span>`;
+      hasReqs = true;
+    }
+    reqContainer.style.display = hasReqs ? 'block' : 'none';
+
+    // Notes
+    const notesContainer = document.getElementById('view-notes-container');
+    const notes = eventData.notes || '';
+    if (notes) {
+      notesContainer.style.display = 'block';
+      document.getElementById('view-notes').textContent = notes;
+    } else {
+      notesContainer.style.display = 'none';
+    }
+
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.closeEventViewModal = function() {
+    const modal = document.getElementById('event-view-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -838,6 +952,10 @@
   }
 
   function rerenderActiveViews() {
+    if (window.innerWidth <= 768) {
+      if (typeof renderMobileCalendar === 'function') renderMobileCalendar(activeView);
+      return;
+    }
     renderWeekCalendar();
     renderFullCalendarEvents();
     if (activeView !== 'week' && fullCalendar) {
@@ -978,6 +1096,238 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
+  }
+
+  // --- Mobile Calendar Renderer ---
+  window.renderMobileCalendar = function(view) {
+    const container = document.getElementById('mobile-calendar-view');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (view === 'week') {
+      renderMobileWeekView(container);
+    } else if (view === 'month') {
+      renderMobileMonthView(container);
+    } else if (view === 'day') {
+      renderMobileDayView(container);
+    }
+  };
+
+  function renderMobileWeekView(container) {
+    const headerHtml = `
+      <div class="mobile-calendar-header">
+        <p class="modd-section-kicker">CALENDARIO</p>
+        <h3>Programacion semanal de salas</h3>
+      </div>
+      <div class="mobile-carousel">
+        <button id="mob-prev-day"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+        <div class="mobile-days-strip" id="mobile-days-strip"></div>
+        <button id="mob-next-day"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+      </div>
+      <div class="mobile-week-subtitle">${formatShortDate(weekStart)} - ${formatShortDate(addDays(weekStart, 6))}</div>
+      <div class="mobile-legend-dots">
+        <span><i class="legend-dot sala1"></i>Sala 1</span>
+        <span><i class="legend-dot sala2"></i>Sala 2</span>
+        <span><i class="legend-dot sala3"></i>Sala 3</span>
+      </div>
+      <div class="mobile-list-header" id="mobile-list-header">
+        ${focusDate.toLocaleString('es-ES', {weekday:'long', day:'numeric', month:'short'}).toUpperCase()} — EVENTOS
+      </div>
+      <div class="mobile-event-list" id="mobile-event-list"></div>
+    `;
+    container.innerHTML = headerHtml;
+    if (window.lucide) lucide.createIcons();
+    
+    const strip = document.getElementById('mobile-days-strip');
+    const dayNamesShort = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(weekStart, i);
+      const isSelected = toISODate(d) === toISODate(focusDate);
+      const dayBtn = document.createElement('button');
+      dayBtn.className = `mobile-day-btn ${isSelected ? 'active' : ''}`;
+      dayBtn.innerHTML = `<span>${dayNamesShort[i]}</span><strong>${d.getDate()}</strong>`;
+      dayBtn.onclick = () => { focusDate = d; rerenderActiveViews(); };
+      strip.appendChild(dayBtn);
+    }
+    
+    document.getElementById('mob-prev-day').onclick = () => { focusDate = addDays(focusDate, -1); rerenderActiveViews(); };
+    document.getElementById('mob-next-day').onclick = () => { focusDate = addDays(focusDate, 1); rerenderActiveViews(); };
+    
+    renderMobileEventList(focusDate);
+  }
+
+  function renderMobileEventList(targetDate) {
+    const list = document.getElementById('mobile-event-list');
+    if (!list) return;
+    
+    const dayEvents = filteredEvents().filter(e => getEventDate(e) === toISODate(targetDate));
+    dayEvents.sort((a,b) => timeToMinutes(getEventTime(a.start)) - timeToMinutes(getEventTime(b.start)));
+    
+    if (dayEvents.length === 0) {
+      list.innerHTML = `
+        <div class="mobile-empty-state">
+          <i data-lucide="calendar-x" class="w-8 h-8"></i>
+          <p>Sin mas eventos este dia</p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+    
+    list.innerHTML = dayEvents.map(evt => {
+      const color = getEventColor(evt);
+      const roomNames = evt.rooms.map(r => findRoom(r).name).join(', ');
+      return `
+        <div class="mobile-list-card" style="--event-color: ${color}" onclick="window.openEventModalById('${evt.id}')">
+          <div class="mobile-list-card-header">
+            <span class="mobile-card-room" style="color: var(--event-color)">${roomNames}</span>
+            <span class="mobile-card-time">${getEventTime(evt.start)} - ${getEventTime(evt.end)}</span>
+          </div>
+          <strong class="mobile-card-title">${escapeHTML(evt.title)}</strong>
+          <span class="mobile-card-resp">${escapeHTML(evt.responsible)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openEventModalById = function(id) {
+    const eventItem = events.find((item) => item.id === id);
+    if (eventItem) openEventViewModal(eventItem);
+  };
+
+  function renderMobileMonthView(container) {
+    const startOfMonth = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
+    const endOfMonth = new Date(focusDate.getFullYear(), focusDate.getMonth() + 1, 0);
+    const startDay = startOfMonth.getDay() === 0 ? 6 : startOfMonth.getDay() - 1;
+    
+    let html = `
+      <div class="mobile-month-header">
+        <div class="mobile-month-title">
+          <p class="modd-section-kicker">CALENDARIO</p>
+          <h3>${startOfMonth.toLocaleString('es-ES', {month:'long', year:'numeric'}).replace(/^\w/, c => c.toUpperCase())}</h3>
+        </div>
+        <div class="mobile-month-nav">
+          <button id="mob-prev-month"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+          <button id="mob-next-month"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+      <div class="mobile-month-grid">
+        <div class="mobile-month-dow">Lu</div>
+        <div class="mobile-month-dow">Ma</div>
+        <div class="mobile-month-dow">Mi</div>
+        <div class="mobile-month-dow">Ju</div>
+        <div class="mobile-month-dow">Vi</div>
+        <div class="mobile-month-dow">Sa</div>
+        <div class="mobile-month-dow">Do</div>
+    `;
+    
+    for (let i = 0; i < startDay; i++) html += `<div></div>`;
+    
+    for (let i = 1; i <= endOfMonth.getDate(); i++) {
+      const d = new Date(focusDate.getFullYear(), focusDate.getMonth(), i);
+      const isSelected = toISODate(d) === toISODate(focusDate);
+      const dayEvts = filteredEvents().filter(e => getEventDate(e) === toISODate(d));
+      const dots = dayEvts.slice(0,3).map(e => `<i style="background:${getEventColor(e)}"></i>`).join('');
+      
+      html += `
+        <div class="mobile-month-day ${isSelected ? 'active' : ''}" onclick="window.setFocusDate('${toISODate(d)}')">
+          <span>${i}</span>
+          <div class="mobile-month-dots">${dots}</div>
+        </div>
+      `;
+    }
+    
+    html += `</div>
+      <div class="mobile-legend-dots" style="margin-bottom: 1.5rem">
+        <span><i class="legend-dot sala1"></i>Sala 1</span>
+        <span><i class="legend-dot sala2"></i>Sala 2</span>
+        <span><i class="legend-dot sala3"></i>Sala 3</span>
+      </div>
+      <div class="mobile-list-header">PRÓXIMOS EVENTOS — ${focusDate.toLocaleString('es-ES', {month:'short', day:'numeric'}).toUpperCase()}</div>
+      <div class="mobile-event-list" id="mobile-event-list"></div>
+    `;
+    
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('mob-prev-month').onclick = () => { focusDate.setMonth(focusDate.getMonth() - 1); rerenderActiveViews(); };
+    document.getElementById('mob-next-month').onclick = () => { focusDate.setMonth(focusDate.getMonth() + 1); rerenderActiveViews(); };
+    
+    renderMobileEventList(focusDate);
+  }
+
+  window.setFocusDate = function(dateStr) {
+    focusDate = parseDate(dateStr);
+    rerenderActiveViews();
+  };
+
+  function renderMobileDayView(container) {
+    const html = `
+      <div class="mobile-day-header">
+        <div class="mobile-month-title">
+          <p class="modd-section-kicker">CALENDARIO</p>
+          <h3>Vista del Día</h3>
+        </div>
+        <div class="mobile-carousel">
+          <button id="mob-prev-day"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <div class="mobile-day-current">
+            <strong>${focusDate.toLocaleString('es-ES', {weekday:'long', day:'numeric', month:'short', year:'numeric'})}</strong>
+            <span>${toISODate(focusDate) === toISODate(new Date()) ? 'Hoy' : ''}</span>
+          </div>
+          <button id="mob-next-day"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+        <div class="mobile-legend-dots" style="margin-bottom: 1rem;">
+          <span><i class="legend-dot sala1"></i>Sala 1</span>
+          <span><i class="legend-dot sala2"></i>Sala 2</span>
+          <span><i class="legend-dot sala3"></i>Sala 3</span>
+        </div>
+      </div>
+      <div class="mobile-day-timeline" id="mobile-day-timeline"></div>
+    `;
+    
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('mob-prev-day').onclick = () => { focusDate = addDays(focusDate, -1); rerenderActiveViews(); };
+    document.getElementById('mob-next-day').onclick = () => { focusDate = addDays(focusDate, 1); rerenderActiveViews(); };
+    
+    const timeline = document.getElementById('mobile-day-timeline');
+    const HOUR_H = 80; // height per hour
+    
+    let timeHtml = '';
+    for (let h = 7; h <= 20; h++) {
+      timeHtml += `
+        <div class="mobile-time-slot" style="height: ${HOUR_H}px">
+          <span>${String(h).padStart(2,'0')}:00</span>
+          <div class="mobile-time-line"></div>
+        </div>
+      `;
+    }
+    
+    const dayEvents = filteredEvents().filter(e => getEventDate(e) === toISODate(focusDate));
+    const eventsHtml = dayEvents.map(evt => {
+      const color = getEventColor(evt);
+      const roomNames = evt.rooms.map(r => findRoom(r).name).join(', ');
+      
+      const startMins = timeToMinutes(getEventTime(evt.start));
+      const endMins = timeToMinutes(getEventTime(evt.end));
+      const startOffset = ((startMins - 7*60) / 60) * HOUR_H;
+      const height = ((endMins - startMins) / 60) * HOUR_H;
+      
+      return `
+        <div class="mobile-day-card" style="--event-color: ${color}; top: ${startOffset + 10}px; height: ${height - 4}px;" onclick="window.openEventModalById('${evt.id}')">
+          <div class="mobile-list-card-header">
+            <span class="mobile-card-room" style="color: var(--event-color)">${roomNames}</span>
+            <span class="mobile-card-time">${getEventTime(evt.start)} - ${getEventTime(evt.end)}</span>
+          </div>
+          <strong class="mobile-card-title">${escapeHTML(evt.title)}</strong>
+          <span class="mobile-card-resp">${escapeHTML(evt.responsible)}</span>
+        </div>
+      `;
+    }).join('');
+    
+    timeline.innerHTML = timeHtml + `<div class="mobile-day-events-layer">${eventsHtml}</div>`;
   }
 })();
 

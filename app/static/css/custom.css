@@ -1927,6 +1927,76 @@ select:focus {
   flex: 1;
 }
 
+.modd-event-card {
+  background: var(--event-color, #24398A);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  left: 0;
+  overflow: hidden;
+  padding: 0.5rem;
+  position: absolute;
+  top: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  z-index: 10;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.modd-event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+}
+
+.modd-event-card strong {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modd-event-card span {
+  opacity: 0.9;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Make FullCalendar native events match our beautiful custom cards */
+.fc-event, .fc-timegrid-event, .fc-daygrid-event {
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+  padding: 0.15rem 0.25rem !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.fc-event:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+  z-index: 5 !important;
+}
+
+.fc-event-main {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  padding: 0.15rem !important;
+}
+
+.fc-theme-standard .fc-scrollgrid {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
 .modd-danger-action {
   align-items: center;
   background: #D5433C;
@@ -1973,6 +2043,177 @@ select:focus {
 
 [data-theme="dark"] .modd-modal-backdrop {
   background: rgba(0, 0, 0, 0.68);
+}
+
+/* --- VIEW MODAL (READ-ONLY) --- */
+.modd-event-view {
+  background: var(--surface, #ffffff);
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  margin: auto;
+}
+
+.modd-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border, #eaecf0);
+  padding-bottom: 1rem;
+}
+
+.modd-view-header-title h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text, #101828);
+  margin-bottom: 0.25rem;
+}
+
+.modd-view-header-title p {
+  font-size: 0.85rem;
+  color: var(--text-muted, #667085);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.modd-view-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.modd-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modd-action-btn.edit-btn {
+  background: transparent;
+  border: 1px solid var(--border, #eaecf0);
+  color: var(--text, #344054);
+}
+
+.modd-action-btn.edit-btn:hover {
+  background: var(--bg-hover, #f9fafb);
+}
+
+.modd-action-btn.delete-btn {
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+}
+
+.modd-action-btn.delete-btn:hover {
+  background: #fee4e2;
+}
+
+.modd-view-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modd-view-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.modd-view-icon {
+  color: var(--text-muted, #667085);
+  margin-top: 0.15rem;
+}
+
+.modd-view-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.modd-view-info small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, #98a2b3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modd-view-info span {
+  font-size: 0.95rem;
+  color: var(--text, #101828);
+  font-weight: 500;
+}
+
+.modd-view-requirements small,
+.modd-view-notes small {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text, #344054);
+  margin-bottom: 0.5rem;
+}
+
+.modd-req-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.modd-req-tags span {
+  background: var(--bg-hover, #f2f4f7);
+  color: var(--text, #344054);
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.modd-view-notes p {
+  font-size: 0.9rem;
+  color: var(--text-muted, #475467);
+  background: var(--bg-hover, #f9fafb);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 0;
+}
+
+[data-theme="dark"] .modd-event-view {
+  background: #1e1e2e;
+  border: 1px solid #313244;
+}
+
+[data-theme="dark"] .modd-action-btn.edit-btn {
+  border-color: #313244;
+  color: #cdd6f4;
+}
+
+[data-theme="dark"] .modd-action-btn.edit-btn:hover {
+  background: #313244;
+}
+
+[data-theme="dark"] .modd-action-btn.delete-btn {
+  background: #3d1a1a;
+  border-color: #6b2626;
+  color: #ffb3b0;
+}
+
+[data-theme="dark"] .modd-req-tags span,
+[data-theme="dark"] .modd-view-notes p {
+  background: #313244;
+  color: #cdd6f4;
 }
 
 @media (max-width: 900px) {
@@ -2082,11 +2323,11 @@ select:focus {
   }
 
   /* Hide headers and footers in bottom nav */
-  .sidebar-brand, .admin-sidebar-header, .sidebar-divider, .admin-sidebar-footer, .sidebar-footer {
+  .sidebar-brand, .admin-brand, .admin-sidebar-header, .sidebar-divider, .admin-sidebar-footer, .sidebar-footer {
     display: none !important;
   }
 
-  .sidebar-nav, .admin-sidebar-nav {
+  .sidebar-nav, .admin-nav, .admin-sidebar-nav {
     flex-direction: row !important;
     width: 100% !important;
     justify-content: space-around !important;
@@ -2095,7 +2336,7 @@ select:focus {
     gap: 0 !important;
   }
 
-  .sidebar-nav a, .admin-sidebar-nav a {
+  .sidebar-nav a, .admin-nav a, .admin-sidebar-nav a {
     flex-direction: column !important;
     padding: 0.5rem 0 !important;
     gap: 0.35rem !important;
@@ -2107,17 +2348,18 @@ select:focus {
     background: transparent !important;
   }
 
-  .sidebar-nav a i, .admin-sidebar-nav a i {
+  .sidebar-nav a i, .admin-nav a i, .admin-sidebar-nav a i {
     margin: 0 auto !important;
     width: 1.35rem !important;
     height: 1.35rem !important;
   }
 
-  .sidebar-nav a.active, .admin-sidebar-nav a.active {
+  .sidebar-nav a.active, .admin-nav a.active, .admin-sidebar-nav a.active {
     color: var(--blue-600, #24398A) !important;
   }
 
   [data-theme="dark"] .sidebar-nav a.active, 
+  [data-theme="dark"] .admin-nav a.active, 
   [data-theme="dark"] .admin-sidebar-nav a.active {
     color: var(--blue-600, #8da8ff) !important;
   }
@@ -2336,8 +2578,9 @@ select:focus {
 
   .modd-week-grid {
     --hour-height: 68px;
-    grid-template-columns: 58px repeat(var(--day-count, 7), minmax(280px, 1fr));
-    min-width: max-content;
+    grid-template-columns: 58px repeat(var(--day-count, 7), minmax(320px, 1fr));
+    width: max-content !important;
+    min-width: 2300px; /* Force overflow so it scrolls nicely */
   }
 
   .modd-fullcalendar-wrap {
@@ -2525,7 +2768,8 @@ select:focus {
   .modd-week-grid {
     --hour-height: 64px;
     grid-template-columns: 52px repeat(var(--day-count, 7), minmax(280px, 1fr));
-    min-width: max-content;
+    width: max-content !important;
+    min-width: 2000px; /* Force overflow so it scrolls nicely */
   }
 
   .modd-event-card {
@@ -2537,5 +2781,318 @@ select:focus {
     left: 0.75rem;
     max-width: none;
     right: 0.75rem;
+  }
+
+  /* --- PREMIUM MOBILE VIEWS --- */
+  .modd-mobile-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+  }
+
+  .mobile-calendar-header {
+    margin-bottom: 1rem;
+  }
+
+  .mobile-carousel {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .mobile-carousel button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.5rem;
+    cursor: pointer;
+  }
+
+  .mobile-days-strip {
+    display: flex;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .mobile-days-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-day-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.8rem;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    min-width: 3.5rem;
+  }
+
+  .mobile-day-btn span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+
+  .mobile-day-btn strong {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .mobile-day-btn.active {
+    background: var(--blue-600);
+    color: white;
+  }
+
+  .mobile-day-btn.active span {
+    color: rgba(255,255,255,0.8);
+  }
+
+  .mobile-week-subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: -0.5rem;
+  }
+
+  .mobile-legend-dots {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .mobile-list-header {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: -0.5rem;
+  }
+
+  .mobile-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobile-list-card {
+    background: color-mix(in srgb, var(--event-color) 8%, white);
+    border-radius: 12px;
+    padding: 1rem;
+    border-left: 4px solid var(--event-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  }
+
+  .mobile-list-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .mobile-card-time {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .mobile-card-title {
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .mobile-card-resp {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .mobile-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-radius: 12px;
+    border: 2px dashed var(--border);
+    gap: 0.5rem;
+  }
+
+  .mobile-month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mobile-month-nav button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    margin-left: 0.25rem;
+  }
+
+  .mobile-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .mobile-month-dow {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .mobile-month-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    font-size: 0.95rem;
+    font-weight: 600;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .mobile-month-day.active {
+    background: var(--blue-600);
+    color: white;
+  }
+
+  .mobile-month-dots {
+    display: flex;
+    gap: 2px;
+    position: absolute;
+    bottom: 2px;
+  }
+
+  .mobile-month-dots i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+
+  .mobile-day-header {
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .mobile-day-current {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+
+  .mobile-day-current strong {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .mobile-day-current span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .mobile-day-timeline {
+    position: relative;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 1rem 0;
+    overflow: hidden;
+  }
+
+  .mobile-time-slot {
+    display: flex;
+    position: relative;
+    padding-left: 0.5rem;
+  }
+
+  .mobile-time-slot span {
+    width: 3.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: -0.4rem;
+  }
+
+  .mobile-time-line {
+    flex: 1;
+    border-top: 1px solid var(--border);
+  }
+
+  .mobile-day-events-layer {
+    position: absolute;
+    top: 1rem; /* match timeline padding-top */
+    left: 4.5rem;
+    right: 0.5rem;
+    bottom: 0;
+  }
+
+  .mobile-day-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--event-color) 8%, white);
+    border-left: 4px solid var(--event-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    z-index: 10;
+  }
+
+  .mobile-day-card .mobile-card-title {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-day-card .mobile-list-card-header {
+    font-size: 0.75rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .mobile-day-card .mobile-card-resp {
+    display: none;
   }
 }
