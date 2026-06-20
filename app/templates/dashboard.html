@@ -976,4 +976,7 @@
 
     function labelStatus(status) {
       const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
-
+      return labels[status] || status;
+    }
+  </script>
+{% endblock %}
