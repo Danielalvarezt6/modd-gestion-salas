@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
 
 # Crear el Engine (El traductor que usa psycopg2 para hablar con Postgres)
-engine = create_engine(settings.DATABASE_URL)
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
 
 # Configurar la fábrica de sesiones (SessionLocal)
 # autocommit=False y autoflush=False para tener control manual de las transacciones
