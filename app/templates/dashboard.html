@@ -772,11 +772,131 @@
       });
     });
 
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Eventos de hoy</div>
+        <div class="stat-number"><span class="highlight-blue" id="stat-events-today">0</span></div>
+        <div class="stat-sub" id="stat-events-today-sub">Sin eventos programados hoy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Solicitudes pendientes</div>
+        <div class="stat-number"><span class="highlight-gold" id="stat-pending-requests">0</span></div>
+        <div class="stat-sub" id="stat-pending-requests-sub">Sin solicitudes pendientes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Salas ocupadas ahora</div>
+        <div class="stat-number"><span class="highlight-green" id="stat-rooms-now">0</span> / 3</div>
+        <div class="stat-sub" id="stat-rooms-now-sub">Sin salas ocupadas ahora</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Eventos esta semana</div>
+        <div class="stat-number"><span class="highlight-red" id="stat-week-events">0</span></div>
+        <div class="stat-sub" id="stat-week-events-sub">Eventos activos de la semana</div>
+      </div>
+    </div>
+
+
+    <!-- Dos columnas: eventos próximos y solicitudes recientes -->
+    <div class="two-col">
+      <!-- Proximos eventos -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Proximos eventos</h3>
+          <a href="/eventos">Ver todos</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini" id="dashboard-events-table">
+            <tbody><tr><td class="empty-state">No hay eventos proximos registrados.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Solicitudes recientes -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Solicitudes recientes</h3>
+          <a href="/solicitudes">Ver todas</a>
+        </div>
+        <div class="panel-body">
+          <table class="table-mini" id="dashboard-requests-table">
+            <tbody><tr><td class="empty-state">No hay solicitudes registradas.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- (Opcional) Más contenido, ejemplo: actividad reciente o gráfico -->
+    <div class="panel" style="margin-bottom: 2rem;">
+      <div class="panel-header">
+        <h3>Ocupacion de salas (hoy)</h3>
+        <a href="/calendario">Ver detalle</a>
+      </div>
+      <div class="panel-body" style="padding: 1.5rem;">
+        <div id="dashboard-occupancy" style="display:flex; gap:2rem; flex-wrap:wrap; justify-content:space-around;">
+          <div class="empty-state">Sin eventos programados hoy.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Inicializar Lucide
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const dashboardDate = document.getElementById('dashboard-date');
+    if (dashboardDate) {
+      dashboardDate.textContent = new Date().toLocaleDateString('es-MX');
+    }
+
+    // Sidebar toggle en móvil
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (sidebar.classList.contains('open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+    }
+
+    overlay.addEventListener('click', closeSidebar);
+
+    // Cerrar sidebar al hacer click en un enlace (móvil)
+    document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
+      link.addEventListener('click', function () {
+        if (window.innerWidth <= 768) {
+          closeSidebar();
+        }
+      });
+    });
+
     // Cerrar sesión: redirigir a login
     document.getElementById('logout-link')?.addEventListener('click', function (e) {
       e.preventDefault();
       // Limpiar datos de sesión (simulado)
-      localStorage.removeItem('token'); // si se usa
+      localStorage.removeItem('token');
       window.location.href = '/api/auth/logout';
     });
 
@@ -864,7 +984,7 @@
 
     function renderRecentRequests(requests) {
       const tbody = document.querySelector('#dashboard-requests-table tbody');
-      const recent = requests.slice(0, 5);
+      const recent = [...requests].reverse().slice(0, 5);
       if (!recent.length) {
         tbody.innerHTML = '<tr><td class="empty-state">No hay solicitudes registradas.</td></tr>';
         return;
@@ -927,52 +1047,4 @@
 
     function labelStatus(status) {
       const labels = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada' };
-      return labels[status] || status;
-    }
-
-    function parseDate(value) {
-      return new Date(`${value}T00:00:00`);
-    }
-
-    function localDateKey(date) {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    }
-
-    function startOfWeek(date) {
-      const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const diff = (copy.getDay() + 6) % 7;
-      copy.setDate(copy.getDate() - diff);
-      return copy;
-    }
-
-    function minutesFromDate(date) {
-      return date.getHours() * 60 + date.getMinutes();
-    }
-
-    function minutesFromTime(value) {
-      const [hour, minute] = String(value || '00:00').split(':').map(Number);
-      return (hour || 0) * 60 + (minute || 0);
-    }
-
-    function formatDate(value) {
-      if (!value) return 'Sin fecha';
-      return parseDate(value).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
-    }
-
-    function formatTime(value) {
-      return String(value || '').slice(0, 5);
-    }
-
-    function formatNumber(value) {
-      return Number.isInteger(value) ? value : value.toFixed(1);
-    }
-
-    function escapeHTML(value) {
-      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-    }
-  });
-</script>
-{% endblock %}
-
-
 
