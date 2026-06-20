@@ -972,6 +972,13 @@
       if (!timeStr) return '';
       return timeStr.substring(0, 5);
     }
+
+    function parseDate(dateString) {
+      if (!dateString) return new Date();
+      const parts = dateString.split('-');
+      if (parts.length !== 3) return new Date();
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
   });
   </script>
 {% endblock %}
