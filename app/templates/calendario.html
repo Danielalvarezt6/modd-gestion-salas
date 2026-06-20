@@ -21,8 +21,8 @@
   }
 
   [data-theme="dark"] {
-    --blue-600: #8da8ff;
-    --blue-700: #6f8be8;
+    --blue-600: #5b7bd6;
+    --blue-700: #4a6bc9;
     --blue-50: rgba(91, 123, 214, 0.16);
     --blue-100: #252d4d;
     --gold: #f4cd56;
@@ -68,7 +68,7 @@
   .sidebar-brand img {
     height: 2.5rem;
     object-fit: contain;
-    width: 2.5rem;
+    width: auto;
   }
 
   .sidebar-brand h1 {
@@ -268,6 +268,9 @@
         <p>Gestion semanal, mensual y diaria de las tres salas interactivas.</p>
       </div>
       <div class="topbar-right">
+        <a href="#export-pdf" class="admin-export-button" title="Exportar a PDF">
+          <i data-lucide="printer" class="w-4 h-4"></i> Exportar PDF
+        </a>
         <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menu">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
@@ -399,7 +402,7 @@
         <span>Fin</span>
         <input id="event-end" type="time" min="09:00" max="20:00" step="3600" required>
       </label>
-      <fieldset class="request-check-grid">
+      <fieldset class="modd-form-span request-check-grid">
         <legend>Salas</legend>
         <label class="modd-checkbox-card">
           <input name="event-room" type="checkbox" value="sala1" checked>

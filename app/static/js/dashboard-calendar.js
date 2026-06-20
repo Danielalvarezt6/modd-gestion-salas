@@ -1,3 +1,12 @@
+/**
+ * @file dashboard-calendar.js
+ * @description Módulo principal para el Calendario Interactivo del Dashboard.
+ * 
+ * Este script controla la lógica del frontend para:
+ * 1. Inicializar la cuadrícula semanal personalizada con CSS Grid (Drag & Drop nativo).
+ * 2. Inicializar FullCalendar para las vistas mensuales y diarias.
+ * 3. Gestionar los eventos (creación rápida, edición visual y alertas de solapamiento).
+ */
 (function () {
   const rooms = [
     { id: 'sala1', name: 'Sala 1', color: '#24398A' },
@@ -24,6 +33,10 @@
 
   document.addEventListener('DOMContentLoaded', initCalendarModule);
 
+  /**
+   * Punto de entrada principal. Se ejecuta al cargar el DOM.
+   * Carga los eventos del backend y monta las vistas.
+   */
   async function initCalendarModule() {
     await cargarEventosDesdeApi();
     bindControls();
@@ -32,6 +45,11 @@
     renderFullCalendarEvents();
   }
 
+  /**
+   * Consume la API de FastAPI para obtener los eventos aprobados
+   * y los formatea para ser consumidos tanto por FullCalendar 
+   * como por el motor Drag and Drop nativo.
+   */
   async function cargarEventosDesdeApi() {
     try {
       const response = await fetch('/api/eventos/?solo_aprobadas=true');
@@ -469,6 +487,11 @@
     return element?.closest?.('.modd-day-column') || null;
   }
 
+  /**
+   * Inicializa la vista de FullCalendar (usada principalmente para la vista Mensual).
+   * Contiene los listeners para Drag&Drop propios de FullCalendar, los cuales
+   * son reenviados a la API para validación de choque de horarios.
+   */
   function initFullCalendar() {
     const fullCalendarElement = document.getElementById('modd-fullcalendar');
     if (!fullCalendarElement || typeof FullCalendar === 'undefined') return;
@@ -503,6 +526,10 @@
     fullCalendar.render();
   }
 
+  /**
+   * Handler asíncrono para los cambios realizados nativamente dentro de FullCalendar.
+   * Si la API detecta un choque (HTTP 409), revierte el arrastre visual `info.revert()`.
+   */
   async function updateFromFullCalendarChange(info) {
     const eventItem = events.find((item) => item.id === info.event.id);
     if (!eventItem) return;

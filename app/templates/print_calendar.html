@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendario Semanal - MODD Gestion de Salas</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Base Print Styles */
+        @page {
+            size: landscape;
+            margin: 10mm;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #111827;
+            background: #fff;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1d4ed8;
+            font-weight: 800;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        
+        table.calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            page-break-inside: auto;
+        }
+        table.calendar-table th, table.calendar-table td {
+            border: 1px solid #d1d5db;
+            padding: 8px;
+            vertical-align: top;
+        }
+        table.calendar-table th {
+            background-color: #f3f4f6;
+            font-weight: 700;
+            text-align: center;
+            font-size: 13px;
+            color: #374151;
+            padding: 10px;
+        }
+        
+        .event-card {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            page-break-inside: avoid;
+        }
+        .event-title {
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+            display: block;
+            font-size: 12px;
+        }
+        .event-time {
+            color: #4b5563;
+            font-size: 11px;
+            display: block;
+            font-weight: 600;
+        }
+        .event-salas {
+            font-size: 11px;
+            color: #047857;
+            font-weight: 700;
+            margin-top: 4px;
+            display: block;
+        }
+        .event-resp {
+            font-size: 10px;
+            color: #6b7280;
+            margin-top: 4px;
+            display: block;
+            font-weight: 500;
+        }
+
+        .footer-cta {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        .footer-cta h3 {
+            margin: 0 0 5px 0;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .footer-cta p {
+            margin: 0;
+            font-size: 14px;
+            color: #334155;
+            font-weight: 600;
+        }
+        .footer-cta a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body onload="setTimeout(() => window.print(), 500)">
+    <div class="header">
+        <h1>MODD - Programación Semanal de Salas</h1>
+        <p>Semana del {{ lunes.strftime('%d/%m/%Y') }} al {{ domingo.strftime('%d/%m/%Y') }}</p>
+    </div>
+
+    <table class="calendar-table">
+        <thead>
+            <tr>
+                {% set days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
+                {% for i in range(7) %}
+                <th>
+                    {{ days[i] }}<br>
+                    <span style="font-weight: 500; font-size: 11px; color: #6b7280;">
+                        {{ (lunes + timedelta(days=i)).strftime('%d/%m/%Y') }}
+                    </span>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                {% for i in range(7) %}
+                <td>
+                    {% if eventos_por_dia[i] %}
+                        {% for e in eventos_por_dia[i] %}
+                        <div class="event-card">
+                            <span class="event-title">{{ e.titulo }}</span>
+                            <span class="event-time">{{ e.hora_de_inicio.strftime('%H:%M') }} - {{ e.hora_de_termino.strftime('%H:%M') }}</span>
+                            <span class="event-salas">
+                                {% for s in e.salas %}Sala {{ s.numero_sala }}{% if not loop.last %}, {% endif %}{% endfor %}
+                            </span>
+                            {% if e.solicitud and e.solicitud.solicitante %}
+                            <span class="event-resp">{{ e.solicitud.solicitante.nombre }} {{ e.solicitud.solicitante.apellido }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; color: #9ca3af; font-size: 12px; padding-top: 20px; font-weight: 500;">
+                            Sin eventos programados
+                        </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer-cta">
+        <h3>¿Necesitas apartar una sala para tu evento?</h3>
+        <p>Solicita tu evento llenando el formulario aquí: <a href="https://forms.gle/e7sbB1Ex5p76BApz6">https://forms.gle/e7sbB1Ex5p76BApz6</a></p>
+    </div>
+</body>
+</html>

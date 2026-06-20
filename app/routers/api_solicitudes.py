@@ -1,3 +1,11 @@
+"""
+API Router para la gestión de Solicitudes de reserva de salas.
+
+Contiene la lógica de negocio principal para crear, validar, actualizar,
+aprobar y rechazar solicitudes. Incluye los algoritmos de detección de colisiones
+de horarios y la asignación automática/híbrida de salas contiguas.
+"""
+
 from datetime import date, datetime, time
 from typing import List
 
@@ -15,7 +23,7 @@ HORA_APERTURA = time(8, 0)
 HORA_CIERRE = time(20, 0)
 
 
-def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
+def _solicitud_resumen(solicitud: Solicitud, advertencia: str = None) -> SolicitudResumenOut:
     evento = solicitud.eventos[0] if solicitud.eventos else None
     solicitante = solicitud.solicitante
     requerimientos = evento.requerimientos if evento else None
@@ -39,10 +47,85 @@ def _solicitud_resumen(solicitud: Solicitud) -> SolicitudResumenOut:
         cafeteria=requerimientos.cafeteria if requerimientos else False,
         videoconferencia=requerimientos.videoconferencia if requerimientos else False,
         salas=evento.salas if evento else [],
+        advertencia_reubicacion=advertencia,
     )
+
+def _calcular_advertencia_reubicacion(db: Session, solicitud: Solicitud) -> str | None:
+    """
+    Simula la aprobación de una solicitud pendiente para prever si forzará
+    la reubicación de eventos preexistentes.
+    
+    Retorna un string con la advertencia si hay colisiones mitigables, o None.
+    """
+    evento_nuevo = solicitud.eventos[0] if solicitud.eventos else None
+    if not evento_nuevo or not evento_nuevo.salas:
+        return None
+    
+    todas_las_salas = db.execute(select(Sala).order_by(Sala.numero_sala)).scalars().all()
+    eventos_mismo_dia = db.execute(
+        select(Evento)
+        .outerjoin(Solicitud)
+        .where(Evento.fecha == evento_nuevo.fecha)
+        .where(Evento.id_evento != evento_nuevo.id_evento)
+        .where((Solicitud.estado.is_(None)) | (Solicitud.estado != "rechazada"))
+        .options(selectinload(Evento.salas))
+    ).scalars().all()
+    
+    eventos_en_conflicto = []
+    salas_ocupadas_por_otros = set()
+    
+    for e in eventos_mismo_dia:
+        if evento_nuevo.hora_de_inicio < e.hora_de_termino and evento_nuevo.hora_de_termino > e.hora_de_inicio:
+            salas_nums = {s.numero_sala for s in e.salas}
+            salas_ocupadas_por_otros.update(salas_nums)
+            if salas_nums.intersection({s.numero_sala for s in evento_nuevo.salas}):
+                eventos_en_conflicto.append(e)
+                
+    if not eventos_en_conflicto:
+        return None
+        
+    mensajes = []
+    for e_conflicto in eventos_en_conflicto:
+        salas_ocupadas_sin_este = salas_ocupadas_por_otros - {s.numero_sala for s in e_conflicto.salas}
+        salas_ocupadas_sin_este.update({s.numero_sala for s in evento_nuevo.salas})
+        
+        salas_libres = [s for s in todas_las_salas if s.numero_sala not in salas_ocupadas_sin_este]
+        bloque = _get_bloques_contiguos(salas_libres, len(e_conflicto.salas))
+        
+        if bloque:
+            nombres_salas = " y ".join([f"Sala {s.numero_sala}" for s in bloque])
+            mensajes.append(f"'{e_conflicto.titulo}' a la {nombres_salas}")
+            salas_ocupadas_por_otros = salas_ocupadas_sin_este
+            salas_ocupadas_por_otros.update({s.numero_sala for s in bloque})
+            
+    if mensajes:
+        return f"⚠️ Si apruebas esta solicitud, se reubicará automáticamente: " + ", ".join(mensajes) + "."
+    return None
+
+
+def _get_bloques_contiguos(salas_list, needed):
+    """
+    Busca bloques de N salas contiguas (ej. Sala 1 y Sala 2) dentro de
+    una lista de salas disponibles. Necesario para mantener la logística
+    cuando un evento requiere abrir las puertas divisoras entre salas.
+    """
+    nums = sorted([s.numero_sala for s in salas_list])
+    for i in range(len(nums) - needed + 1):
+        if nums[i+needed-1] - nums[i] == needed - 1:
+            return [s for s in salas_list if s.numero_sala in nums[i:i+needed]]
+    return None
 
 
 def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_evento_ignorado: int | None = None):
+    """
+    Valida la disponibilidad de salas para un bloque de tiempo dado.
+    
+    Operativa en dos modos:
+    1. Manual (Administradora envía `salas_ids`): Verifica que el conjunto de salas pedidas no colisione.
+    2. Automático (Formularios web sin `salas_ids`): Calcula cuántas salas se necesitan basándose en
+       el número de asistentes y busca bloques contiguos. Si no hay bloque libre, intenta simular
+       una reubicación matemática de otros eventos para hacer espacio.
+    """
     if payload.evento_inicio >= payload.evento_fin:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -107,12 +190,39 @@ def _validar_solape_evento(payload: SolicitudEventoCreate, db: Session, id_event
         return salas_asignadas
     else:
         # Modo Google Forms (Automático)
-        if len(salas_disponibles) < salas_necesarias:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Se requieren {salas_necesarias} salas para {asistentes} asistentes, pero solo hay {len(salas_disponibles)} disponibles en ese horario."
-            )
-        return salas_disponibles[:salas_necesarias]
+        todas_las_salas_ordenadas = sorted(todas_las_salas, key=lambda s: s.numero_sala)
+        bloque_libre = _get_bloques_contiguos(salas_disponibles, salas_necesarias)
+        if bloque_libre:
+            return bloque_libre
+            
+        # Si no hay bloque libre, buscar si podemos reubicar UN evento para liberar espacio
+        # (Esto permite guardar la solicitud como pendiente con conflicto temporal)
+        for evento_choca in eventos_mismo_dia:
+            if id_evento_ignorado is not None and evento_choca.id_evento == id_evento_ignorado:
+                continue
+            if payload.evento_inicio < evento_choca.hora_de_termino and payload.evento_fin > evento_choca.hora_de_inicio:
+                # Simular quitar este evento
+                salas_ocupadas_simuladas = set(salas_ocupadas)
+                for s in evento_choca.salas:
+                    salas_ocupadas_simuladas.discard(s.numero_sala)
+                
+                salas_disponibles_simuladas = [s for s in todas_las_salas_ordenadas if s.numero_sala not in salas_ocupadas_simuladas]
+                bloque_para_nuevo = _get_bloques_contiguos(salas_disponibles_simuladas, salas_necesarias)
+                
+                if bloque_para_nuevo:
+                    # El nuevo cabe, ¿pero a dónde se va el que choca?
+                    salas_libres_para_choca = [s for s in salas_disponibles_simuladas if s not in bloque_para_nuevo]
+                    bloque_para_choca = _get_bloques_contiguos(salas_libres_para_choca, len(evento_choca.salas))
+                    
+                    if bloque_para_choca:
+                        # Se puede reubicar matemáticamente. Asignar el bloque al nuevo (causando choque temporal).
+                        # La administradora verá el choque y al aprobar, el sistema hará el movimiento real.
+                        return bloque_para_nuevo
+                        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Se requieren {salas_necesarias} salas contiguas para {asistentes} asistentes, y no hay forma de acomodarlos ni reubicando eventos."
+        )
 
 
 def _load_solicitud(db: Session, id_solicitud: int) -> Solicitud | None:
@@ -140,7 +250,13 @@ async def obtener_solicitudes(db: Session = Depends(get_db)):
         .order_by(Solicitud.fecha_solicitud.desc(), Solicitud.hora_de_solicitud.desc())
     ).scalars().all()
 
-    return [_solicitud_resumen(solicitud) for solicitud in solicitudes]
+    res = []
+    for sol in solicitudes:
+        adv = None
+        if sol.estado == "pendiente":
+            adv = _calcular_advertencia_reubicacion(db, sol)
+        res.append(_solicitud_resumen(sol, adv))
+    return res
 
 
 def _delete_solicitud_tree(db: Session, solicitud: Solicitud):
@@ -209,7 +325,8 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
             selectinload(Solicitud.eventos).selectinload(Evento.requerimientos),
         )
     ).scalars().one()
-    return _solicitud_resumen(solicitud)
+    adv = _calcular_advertencia_reubicacion(db, solicitud) if solicitud.estado == "pendiente" else None
+    return _solicitud_resumen(solicitud, adv)
 
 
 @router.put("/{id_solicitud}", response_model=SolicitudResumenOut)
@@ -257,7 +374,8 @@ async def actualizar_solicitud(
 
     db.commit()
     solicitud = _load_solicitud(db, id_solicitud)
-    return _solicitud_resumen(solicitud)
+    adv = _calcular_advertencia_reubicacion(db, solicitud) if solicitud.estado == "pendiente" else None
+    return _solicitud_resumen(solicitud, adv)
 
 
 @router.delete("/{id_solicitud}", status_code=status.HTTP_204_NO_CONTENT)
@@ -288,6 +406,14 @@ async def actualizar_estado_solicitud(
     payload: SolicitudEstadoUpdate,
     db: Session = Depends(get_db),
 ):
+    """
+    Actualiza el estado de la solicitud (pendiente, aprobada, rechazada).
+    
+    - Si el estado pasa a "aprobada", se consolida el evento: 
+      el algoritmo recalcula las colisiones y efectúa las reubicaciones
+      automáticas reales de otros eventos si fuera necesario para dar cabida
+      al nuevo evento prioritario.
+    """
     estados_validos = {"pendiente", "aprobada", "rechazada"}
     if payload.estado not in estados_validos:
         raise HTTPException(
@@ -295,17 +421,64 @@ async def actualizar_estado_solicitud(
             detail="Estado de solicitud no valido.",
         )
 
-    solicitud = db.get(Solicitud, id_solicitud)
+    solicitud = db.execute(
+        select(Solicitud)
+        .where(Solicitud.id_solicitud == id_solicitud)
+        .options(
+            selectinload(Solicitud.eventos).selectinload(Evento.salas),
+        )
+    ).scalars().first()
     if not solicitud:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="La solicitud especificada no existe.",
         )
 
+    if payload.estado == "aprobada":
+        evento_nuevo = solicitud.eventos[0] if solicitud.eventos else None
+        if evento_nuevo:
+            todas_las_salas = db.execute(select(Sala).order_by(Sala.numero_sala)).scalars().all()
+            eventos_mismo_dia = db.execute(
+                select(Evento)
+                .outerjoin(Solicitud)
+                .where(Evento.fecha == evento_nuevo.fecha)
+                .where(Evento.id_evento != evento_nuevo.id_evento)
+                .where((Solicitud.estado.is_(None)) | (Solicitud.estado != "rechazada"))
+                .options(selectinload(Evento.salas))
+            ).scalars().all()
+            
+            eventos_en_conflicto = []
+            salas_ocupadas_por_otros = set()
+            
+            for e in eventos_mismo_dia:
+                if evento_nuevo.hora_de_inicio < e.hora_de_termino and evento_nuevo.hora_de_termino > e.hora_de_inicio:
+                    salas_nums = {s.numero_sala for s in e.salas}
+                    salas_ocupadas_por_otros.update(salas_nums)
+                    if salas_nums.intersection({s.numero_sala for s in evento_nuevo.salas}):
+                        eventos_en_conflicto.append(e)
+            
+            for e_conflicto in eventos_en_conflicto:
+                salas_ocupadas_sin_este = salas_ocupadas_por_otros - {s.numero_sala for s in e_conflicto.salas}
+                salas_ocupadas_sin_este.update({s.numero_sala for s in evento_nuevo.salas})
+                
+                salas_libres = [s for s in todas_las_salas if s.numero_sala not in salas_ocupadas_sin_este]
+                bloque = _get_bloques_contiguos(salas_libres, len(e_conflicto.salas))
+                
+                if bloque:
+                    e_conflicto.salas = bloque
+                    salas_ocupadas_por_otros = salas_ocupadas_sin_este
+                    salas_ocupadas_por_otros.update({s.numero_sala for s in bloque})
+                    db.add(e_conflicto)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"No se puede aprobar. El evento '{e_conflicto.titulo}' que choca con esta solicitud ya no tiene salas contiguas disponibles para ser reubicado automáticamente."
+                    )
+
     solicitud.estado = payload.estado
     db.commit()
 
-    solicitud = db.execute(
+    solicitud_actualizada = db.execute(
         select(Solicitud)
         .where(Solicitud.id_solicitud == id_solicitud)
         .options(
@@ -314,4 +487,5 @@ async def actualizar_estado_solicitud(
             selectinload(Solicitud.eventos).selectinload(Evento.requerimientos),
         )
     ).scalars().one()
-    return _solicitud_resumen(solicitud)
+    adv = _calcular_advertencia_reubicacion(db, solicitud_actualizada) if solicitud_actualizada.estado == "pendiente" else None
+    return _solicitud_resumen(solicitud_actualizada, adv)

@@ -5,6 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MODD - Gestion de Salas{% endblock %}</title>
     
+    <!-- Favicon Original (Fallback) -->
+    <link rel="icon" id="dynamic-favicon" href="/static/assets/logo.png" type="image/png">
+    
+    <!-- Script para adaptar el favicon dinámicamente a un cuadrado perfecto y evitar estiramiento -->
+    <script>
+      window.addEventListener('load', function() {
+        var img = new Image();
+        img.onload = function() {
+          var size = Math.max(img.width, img.height);
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          // Dibujar la imagen centrada en el lienzo cuadrado (relleno transparente automático)
+          ctx.drawImage(img, (size - img.width) / 2, (size - img.height) / 2);
+          
+          var link = document.getElementById('dynamic-favicon') || document.createElement('link');
+          link.type = 'image/png';
+          link.rel = 'icon';
+          link.href = canvas.toDataURL();
+          document.head.appendChild(link);
+        };
+        img.src = '/static/assets/logo.png';
+      });
+    </script>
+    
     <!-- Aplicar tema guardado antes del render (evita flash) -->
     <script>
       (function() {
@@ -93,6 +119,78 @@
 
             lucide.createIcons();
         })();
+    </script>
+    <!-- Modal Exportar PDF -->
+    <div class="modd-modal hidden" id="export-pdf-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="export-pdf-title">
+      <div class="modd-modal-backdrop" id="export-pdf-backdrop"></div>
+      <div class="modd-event-modal" style="max-width: 450px; width: 100%;">
+        <header class="modd-modal-header">
+          <h3 id="export-pdf-title" style="display:flex;align-items:center;gap:0.5rem;"><i data-lucide="printer" class="w-5 h-5" style="color:var(--blue-600)"></i> Exportar Calendario PDF</h3>
+          <button type="button" class="modd-icon-button" id="close-export-btn" aria-label="Cerrar modal">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </header>
+        <div class="modd-form-grid" style="grid-template-columns: 1fr; margin-bottom: 1.5rem;">
+          <label class="modd-form-span">
+            <span>Selecciona una fecha (Lunes a Domingo):</span>
+            <input type="date" id="export-date-input" required>
+            <span style="color: var(--muted); font-size: 0.75rem; font-weight: normal; margin-top: 0.25rem;">El calendario generado incluirá todos los eventos de la semana que contiene a la fecha seleccionada.</span>
+          </label>
+        </div>
+        <div class="modd-modal-actions">
+          <span class="modd-modal-action-spacer"></span>
+          <button type="button" class="modd-secondary-action" id="cancel-export-btn">Cancelar</button>
+          <button type="button" class="modd-primary-action" id="confirm-export-btn">Generar PDF</button>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      (function(){
+        const exportModal = document.getElementById('export-pdf-modal');
+        const closeBtn = document.getElementById('close-export-btn');
+        const cancelBtn = document.getElementById('cancel-export-btn');
+        const confirmBtn = document.getElementById('confirm-export-btn');
+        const dateInput = document.getElementById('export-date-input');
+        const backdrop = document.getElementById('export-pdf-backdrop');
+
+        function closeExportModal() {
+          exportModal.classList.add('hidden');
+        }
+
+        if (closeBtn) closeBtn.addEventListener('click', closeExportModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeExportModal);
+        if (backdrop) backdrop.addEventListener('click', closeExportModal);
+        
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', () => {
+            if (!dateInput.value) {
+                alert("Por favor selecciona una fecha");
+                return;
+            }
+            const url = `/calendario/print?start_date=${dateInput.value}`;
+            window.open(url, '_blank');
+            closeExportModal();
+          });
+        }
+
+        // Delegación de eventos para capturar clics en botones de exportación
+        document.addEventListener('click', (e) => {
+          const exportBtn = e.target.closest('.admin-export-button');
+          if (exportBtn && exportBtn.getAttribute('href') === '#export-pdf') {
+            e.preventDefault();
+            exportModal.classList.remove('hidden');
+            
+            // Set today's date by default using local timezone
+            const today = new Date();
+            const tzOffset = today.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(today - tzOffset)).toISOString().slice(0, 10);
+            dateInput.value = localISOTime;
+            
+            if (window.lucide) window.lucide.createIcons();
+          }
+        });
+      })();
     </script>
     
     {% block extra_scripts %}{% endblock %}

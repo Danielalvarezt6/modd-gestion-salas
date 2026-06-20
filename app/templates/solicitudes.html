@@ -172,7 +172,7 @@
         Fin
         <select name="evento_fin" required></select>
       </label>
-      <fieldset class="request-check-grid">
+      <fieldset class="modd-form-span request-check-grid">
         <legend>Salas</legend>
         <label class="modd-checkbox-card">
           <input name="salas_ids" type="checkbox" value="1" checked>
@@ -454,12 +454,16 @@
           const requerimientos = formatRequirements(item);
           const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
           const firstName = requesterFirstName(item);
-          const action = estado === 'pendiente'
-            ? '<button class="admin-soft-button" data-action="approve" type="button">Aprobar</button><button class="admin-soft-button" data-action="reject" type="button">Rechazar</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>'
-            : '<button class="admin-soft-button" data-action="view" type="button">Ver detalle</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>';
+          let action = '<button class="admin-icon-button view-btn" data-action="view" type="button" aria-label="Ver detalle" title="Ver detalle"><i data-lucide="search" class="w-4 h-4"></i><span class="sr-only">Ver detalle</span></button>';
+          if (estado === 'pendiente') {
+            action += '<button class="admin-icon-button approve-btn" data-action="approve" type="button" aria-label="Aprobar" title="Aprobar"><i data-lucide="check" class="w-4 h-4"></i><span class="sr-only">Aprobar</span></button><button class="admin-icon-button reject-btn" data-action="reject" type="button" aria-label="Rechazar" title="Rechazar"><i data-lucide="x" class="w-4 h-4"></i><span class="sr-only">Rechazar</span></button>';
+          } else if (estado === 'rechazada') {
+            action += '<button class="admin-icon-button approve-btn" data-action="approve" type="button" aria-label="Aprobar" title="Aprobar"><i data-lucide="check" class="w-4 h-4"></i><span class="sr-only">Aprobar</span></button>';
+          }
+          action += '<button class="admin-icon-button edit-btn" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button delete-btn" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button>';
 
           return `
-            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-ids="${escapeAttr(salaIds.join(','))}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}">
+            <tr data-id="${item.id_solicitud}" data-status="${estado}" data-search="${escapeAttr(searchText)}" data-first-name="${escapeAttr(firstName)}" data-last-name="${escapeAttr(item.solicitante_apellido || '')}" data-email="${escapeAttr(item.solicitante_correo || '')}" data-phone="${escapeAttr(item.solicitante_telefono || '')}" data-event-title="${escapeAttr(item.evento_titulo || '')}" data-description="${escapeAttr(item.evento_descripcion || '')}" data-event-date="${escapeAttr(item.evento_fecha || '')}" data-start="${escapeAttr(item.evento_inicio || '')}" data-end="${escapeAttr(item.evento_fin || '')}" data-room-ids="${escapeAttr(salaIds.join(','))}" data-attendees="${item.evento_asistentes || 0}" data-layout="${escapeAttr(item.acomodo || '')}" data-audio="${Boolean(item.equipo_de_sonido)}" data-catering="${Boolean(item.cafeteria)}" data-video="${Boolean(item.videoconferencia)}" data-warning="${escapeAttr(item.advertencia_reubicacion || '')}">
               <td data-label="ID" class="admin-muted">${item.id_solicitud}</td>
               <td data-label="Solicitante"><div class="admin-strong">${escapeHTML(item.solicitante_nombre)}</div><div class="admin-muted">${escapeHTML(item.solicitante_correo)}</div></td>
               <td data-label="Evento"><div class="admin-strong">${escapeHTML(item.evento_titulo || 'Sin evento')}</div><div class="admin-muted">${item.evento_asistentes || 0} asistentes</div></td>
@@ -547,16 +551,36 @@
     }
 
     function openRequestDetail(row) {
+      const id = row.dataset.id;
+      document.getElementById('request-detail-title').textContent = `Solicitud ${id || ''}`;
+      
+      let warningHtml = '';
+      if (row.dataset.warning) {
+        warningHtml = `
+          <div style="grid-column: 1 / -1; background: #fffbeb; color: #92400e; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #f59e0b; font-weight: 600; display: flex; align-items: center; gap: 0.75rem;">
+            ${escapeHTML(row.dataset.warning)}
+          </div>
+        `;
+      }
+
+      const nombre = row.dataset.firstName + " " + row.dataset.lastName;
+      const correo = row.dataset.email;
+      const telefono = row.dataset.phone || 'Sin telefono';
+      const solicitanteHtml = `${escapeHTML(nombre.trim())}<br><span style="font-weight:normal; opacity:0.8">${escapeHTML(correo)}<br>${escapeHTML(telefono)}</span>`;
+
+      const eventoHtml = `${escapeHTML(row.dataset.eventTitle || 'Sin evento')}<br><span style="font-weight:normal; opacity:0.8">${escapeHTML(row.dataset.description || 'Sin descripcion')}<br>${row.dataset.attendees} asistentes</span>`;
+
       const cells = Array.from(row.children).map(function (cell) { return cell.innerText.trim(); });
-      document.getElementById('request-detail-title').textContent = `Solicitud ${cells[0] || ''}`;
+
       detailContent.innerHTML = `
-        <div><span>ID</span><strong>${escapeHTML(cells[0] || '')}</strong></div>
-        <div><span>Solicitante</span><strong>${escapeHTML(cells[1] || '')}</strong></div>
-        <div><span>Evento</span><strong>${escapeHTML(cells[2] || '')}</strong></div>
-        <div><span>Requerimientos</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
+        ${warningHtml}
+        <div><span>ID</span><strong>${escapeHTML(id || '')}</strong></div>
+        <div><span>Solicitante</span><strong>${solicitanteHtml}</strong></div>
+        <div style="grid-column: 1 / -1;"><span>Evento</span><strong>${eventoHtml}</strong></div>
+        <div style="grid-column: 1 / -1;"><span>Requerimientos</span><strong>${escapeHTML(cells[3] || '')}</strong></div>
         <div><span>Sala</span><strong>${escapeHTML(cells[4] || '')}</strong></div>
         <div><span>Fecha / Hora</span><strong>${escapeHTML(cells[5] || '')}</strong></div>
-        <div><span>Estado</span><strong>${escapeHTML(cells[6] || '')}</strong></div>
+        <div style="grid-column: 1 / -1;"><span>Estado</span><strong>${escapeHTML(cells[6] || '')}</strong></div>
       `;
       detailModal.classList.remove('hidden');
       detailModal.setAttribute('aria-hidden', 'false');

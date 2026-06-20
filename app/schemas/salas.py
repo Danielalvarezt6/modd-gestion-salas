@@ -103,6 +103,7 @@ class SolicitudResumenOut(BaseModel):
     cafeteria: Optional[bool] = False
     videoconferencia: Optional[bool] = False
     salas: List[SalaOut] = []
+    advertencia_reubicacion: Optional[str] = None
 
 class SolicitudEstadoUpdate(BaseModel):
     estado: str

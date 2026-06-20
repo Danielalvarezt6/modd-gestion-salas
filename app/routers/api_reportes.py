@@ -1,3 +1,11 @@
+"""
+API Router para la analítica y generación de reportes PDF.
+
+Contiene los endpoints encargados de calcular las estadísticas de ocupación
+(usadas en el Dashboard principal) y un motor interno minimalista para dibujar 
+documentos PDF nativos de resúmenes operativos sin dependencias externas pesadas.
+"""
+
 import io
 import unicodedata
 from datetime import date, timedelta
@@ -46,6 +54,11 @@ def _eventos_filtrados(
 
 
 def _resumen_eventos(eventos):
+    """
+    Agrega los eventos por sala para producir conteos de eventos y asistentes.
+    Devuelve un diccionario estructurado apto para las tarjetas del Dashboard y
+    para la tabla resumen del PDF.
+    """
     uso_por_sala = []
     for numero_sala in (1, 2, 3):
         eventos_sala = [evento for evento in eventos if any(s.numero_sala == numero_sala for s in evento.salas)]
@@ -71,6 +84,13 @@ def _wrapped_lines(label, value, width_chars=96):
 
 
 class SimplePDF:
+    """
+    Mini-motor de generación de PDF construyendo las primitivas directamente
+    en la sintaxis de PDF 1.4.
+    
+    Evita depender de librerías como xhtml2pdf o ReportLab para tener control total
+    sobre el peso, la paginación y la paleta de colores del reporte.
+    """
     def __init__(self):
         self.pages: list[str] = []
         self.lines: list[str] = []
@@ -312,6 +332,11 @@ async def obtener_resumen_reportes(
     sala: Optional[int] = Query(default=None),
     db: Session = Depends(get_db),
 ):
+    """
+    Endpoint para consumir métricas de ocupación en JSON.
+    Permite filtrar por rangos de fecha y salas, devolviendo totales de asistentes
+    y cantidad de eventos programados (aprobados).
+    """
     eventos = _eventos_filtrados(db, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, sala=sala)
     resumen = _resumen_eventos(eventos)
 
@@ -331,6 +356,12 @@ async def descargar_reporte_pdf(
     sala: Optional[int] = Query(default=None),
     db: Session = Depends(get_db),
 ):
+    """
+    Endpoint principal de exportación PDF.
+    Soporta generación automática determinando periodos (semanal, mensual) o permitiendo
+    filtros arbitrarios por fecha/sala.
+    Retorna un flujo binario (StreamingResponse) con el documento PDF construido al vuelo.
+    """
     today = date.today()
     filename = "reporte_modd.pdf"
     titulo = "Reporte personalizado"

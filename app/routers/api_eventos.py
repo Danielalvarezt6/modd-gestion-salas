@@ -1,9 +1,18 @@
+"""
+API Router para la gestión directa de Eventos aprobados.
+
+Contiene endpoints para operaciones CRUD de eventos (que ya pasaron el filtro de solicitud).
+Provee la validación estricta de solapamientos usada también al re-agendar
+un evento (como en el Drag and Drop del calendario) y utilidades de exportación
+como la generación del calendario .ics.
+"""
+
 from datetime import time
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import select  # <-- Importar select
-from typing import List
+from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.salas import Evento, Sala, Solicitud
@@ -16,6 +25,13 @@ HORA_CIERRE = time(20, 0)
 
 
 def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_ignorado: int | None = None) -> List[Sala]:
+    """
+    Función de validación centralizada que garantiza la integridad horaria.
+    Verifica que:
+    1. Las horas sean lógicas y estén dentro del rango permitido (08:00 a 20:00).
+    2. Las salas seleccionadas existan y tengan cupo suficiente para el aforo.
+    3. Ninguna de las salas requeridas tenga colisiones con otro evento aprobado en ese bloque horario.
+    """
     if evento.hora_de_inicio >= evento.hora_de_termino:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -100,6 +116,10 @@ def validar_horario_evento(evento: EventoCreate | EventoUpdate, db: Session, id_
 
 @router.get("/", response_model=List[EventoOut])
 async def obtener_eventos(solo_aprobadas: bool = False, db: Session = Depends(get_db)):
+    """
+    Lista los eventos del sistema. Usado principalmente por FullCalendar para
+    pintar los bloques semanales y mensuales de ocupación.
+    """
     stmt = select(Evento).options(
         selectinload(Evento.salas),
         selectinload(Evento.requerimientos),
@@ -111,6 +131,59 @@ async def obtener_eventos(solo_aprobadas: bool = False, db: Session = Depends(ge
     eventos = db.execute(stmt.order_by(Evento.fecha, Evento.hora_de_inicio)).scalars().all()
     return eventos
 
+
+from fastapi.responses import Response
+import datetime
+
+@router.get("/exportar/ics")
+async def exportar_eventos_ics(db: Session = Depends(get_db)):
+    """
+    Genera un archivo dinámico .ics para que los eventos aprobados puedan ser
+    importados a clientes de calendario externos (Google Calendar, Outlook, Apple Calendar).
+    """
+    # We call the existing function directly (it's async but currently doesn't use await inside, wait, `obtener_eventos` is async)
+    eventos = await obtener_eventos(solo_aprobadas=True, db=db)
+    
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//MODD Gestion de Salas//MX",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH"
+    ]
+    for e in eventos:
+        lines.append("BEGIN:VEVENT")
+        lines.append(f"UID:evento-{e.id_evento}@modd.com")
+        
+        dtstart = e.fecha.strftime("%Y%m%d") + "T" + e.hora_de_inicio.strftime("%H%M%S")
+        dtend = e.fecha.strftime("%Y%m%d") + "T" + e.hora_de_termino.strftime("%H%M%S")
+        dtstamp = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+        
+        lines.append(f"DTSTAMP:{dtstamp}")
+        lines.append(f"DTSTART:{dtstart}")
+        lines.append(f"DTEND:{dtend}")
+        
+        title = e.titulo.replace('\\', '\\\\').replace(';', '\\;').replace(',', '\\,').replace('\n', ' ')
+        lines.append(f"SUMMARY:{title}")
+        
+        desc = (e.descripcion or "Sin descripción").replace('\\', '\\\\').replace(';', '\\;').replace(',', '\\,').replace('\n', '\\n').replace('\r', '')
+        if e.solicitud and e.solicitud.solicitante:
+            desc += f"\\nResponsable: {e.solicitud.solicitante.nombre} {e.solicitud.solicitante.apellido}"
+        lines.append(f"DESCRIPTION:{desc}")
+        
+        salas = ", ".join([f"Sala {s.numero_sala}" for s in e.salas])
+        lines.append(f"LOCATION:{salas}")
+        
+        lines.append("END:VEVENT")
+    
+    lines.append("END:VCALENDAR")
+    ics_content = "\r\n".join(lines)
+    
+    return Response(
+        content=ics_content,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="calendario_modd.ics"'}
+    )
 
 @router.get("/{id_evento}", response_model=EventoOut)
 async def obtener_evento(id_evento: int, db: Session = Depends(get_db)):
@@ -132,6 +205,11 @@ async def crear_evento(evento: EventoCreate, db: Session = Depends(get_db)):
 
 @router.put("/{id_evento}", response_model=EventoOut)
 async def actualizar_evento(id_evento: int, evento: EventoUpdate, db: Session = Depends(get_db)):
+    """
+    Actualiza la fecha, hora o salas de un evento existente.
+    Éste es el endpoint consumido al hacer 'Drag and Drop' en el calendario interactivo.
+    Se pasa por la validación estricta de solapamiento para evitar conflictos al soltar el bloque.
+    """
     evento_db = db.get(Evento, id_evento)
 
     if not evento_db:

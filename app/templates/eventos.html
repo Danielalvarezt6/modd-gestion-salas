@@ -35,6 +35,9 @@
         <p>Listado completo de eventos confirmados y mantenimiento de salas.</p>
       </div>
       <div class="admin-topbar-actions">
+        <a href="#export-pdf" class="admin-export-button" title="Exportar a PDF">
+          <i data-lucide="printer" class="w-4 h-4"></i> Exportar PDF
+        </a>
         <button class="admin-primary-button" id="new-event-btn" type="button">
           <i data-lucide="file-plus" class="w-4 h-4"></i> Nueva solicitud
         </button>
@@ -116,7 +119,7 @@
         <span>Responsable</span>
         <input id="detail-responsible" type="text">
       </label>
-      <label>
+      <label class="modd-form-span">
         <span>Sala</span>
         <div class="request-check-grid compact-check-grid">
           <label class="modd-checkbox-card">
@@ -340,7 +343,7 @@
               <td data-label="Dia">${formatDate(item.fecha)}</td>
               <td data-label="Horario" class="admin-muted">${item.hora_de_inicio.slice(0, 5)} - ${item.hora_de_termino.slice(0, 5)}</td>
               <td data-label="Asistentes">${item.no_de_asistentes || 0}</td>
-              <td data-label="Acciones"><div class="admin-action-row"><button class="admin-soft-button" data-action="view" type="button">Ver</button><button class="admin-icon-button" data-action="edit" type="button" aria-label="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button><button class="admin-icon-button" data-action="delete" type="button" aria-label="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>
+              <td data-label="Acciones"><div class="admin-action-row"><button class="admin-icon-button view-btn" data-action="view" type="button" aria-label="Ver detalle" title="Ver detalle"><i data-lucide="search" class="w-4 h-4"></i><span class="sr-only">Ver detalle</span></button><button class="admin-icon-button edit-btn" data-action="edit" type="button" aria-label="Editar" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i><span class="sr-only">Editar</span></button><button class="admin-icon-button delete-btn" data-action="delete" type="button" aria-label="Eliminar" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i><span class="sr-only">Eliminar</span></button></div></td>
             </tr>
           `;
         }).join('');

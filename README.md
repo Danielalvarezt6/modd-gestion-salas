@@ -1,221 +1,150 @@
-# MODD - Gestion de Salas Interactivas
+# MODD - Gestión de Salas Interactivas
 
-MODD es una aplicacion web para administrar solicitudes, eventos, calendario y reportes PDF de salas interactivas. El sistema usa FastAPI, Jinja2, Tailwind CSS, JavaScript Vanilla, SQLAlchemy, Alembic y PostgreSQL.
+MODD es una aplicación web integral diseñada para la administración, programación y seguimiento de salas interactivas en la Universidad de Sonora. Su propósito es erradicar el uso de hojas de cálculo y simplificar el proceso de reservas mediante una interfaz moderna, automatizada e inteligente.
 
-## Funcionalidades
+El sistema fue desarrollado con un backend robusto basado en **FastAPI** y una interfaz interactiva fluida utilizando **Jinja2**, **JavaScript Vanilla** (para ligereza) y **Tailwind CSS**.
 
-- Login con cookie JWT y rutas internas protegidas.
-- Dashboard.
-- Calendario por semana, mes y dia.
-- Deteccion de solapamientos por sala, fecha y horario.
-- Sugerencia de salas disponibles cuando un horario se solapa.
-- Arrastre  y redimension de eventos por horas y por salas.
-- Asignación inteligente e híbrida de salas (selección manual con validación de cupo o automática para integraciones externas como Google Forms).
-- Edición, aprobación y rechazo de solicitudes de sala.
-- Reportes PDF semanal, mensual, por sala y personalizado.
-- Modo claro/oscuro en toda la aplicacion.
+---
 
-## Modelo Relacional
+## 🚀 Funcionalidades Principales
 
-El proyecto contiene las tablas del modelo:
+### Para Usuarios y Solicitantes
+- **Dashboard e Inicio de Sesión**: Autenticación segura mediante cookies JWT con redirección automática para rutas protegidas.
+- **Formularios de Solicitud (Google Forms Ready)**: Compatibilidad para procesar solicitudes externas o de forma nativa a través de la aplicación.
+- **Modo Oscuro/Claro**: Soporte completo de temas que se adaptan a las preferencias del sistema del usuario, incluyendo componentes dinámicos como el calendario y los PDF exportables.
 
-- `solicitante`
-- `solicitud`
-- `evento`
-- `requerimientos`
-- `sala`
-- `sala_evento`
-- `usuarios`
+### Para Administradores
+- **Calendario Interactivo**: Visualización de eventos y disponibilidades en formato semanal, mensual y diario utilizando `FullCalendar`.
+- **Drag & Drop Avanzado**: Ajuste dinámico de la duración de los eventos y la sala asignada arrastrando los bloques dentro del calendario, con cálculos de disponibilidad en tiempo real.
+- **Detección Inteligente de Solapamientos**: El sistema previene colisiones de horarios, validando sala, fecha y hora. Si hay un conflicto, sugiere automáticamente salas alternativas disponibles.
+- **Gestión de Solicitudes**: Aprobación, rechazo y re-evaluación de solicitudes en un solo clic. Las solicitudes rechazadas pueden editarse y reactivarse.
+- **Reportes y Exportación PDF**: Generación de recuadros estadísticos de ocupación en el dashboard y exportación de calendarios y horarios a formatos imprimibles (PDF), filtrables por semana o día.
 
-## Requisitos
+---
 
-- Python 3.10 o superior
-- PostgreSQL
-- pgAdmin4 opcional para inspeccionar la base de datos
+## 🏗️ Arquitectura y Tecnologías
 
-## Instalacion
+El proyecto sigue una arquitectura **MVC-like** adaptada al ecosistema de FastAPI.
 
-1. Clonar el repositorio:
+### Stack Tecnológico
+| Capa         | Tecnologías                                                                 |
+|--------------|-----------------------------------------------------------------------------|
+| **Backend**  | Python 3.10+, FastAPI, Pydantic, SQLAlchemy, Alembic                        |
+| **Base de Datos** | PostgreSQL 14+                                                            |
+| **Frontend** | HTML5, CSS Variables, Tailwind CSS, JavaScript (ES6), FullCalendar, Lucide Icons |
+| **Generación PDF** | Motor Nativo (Direct PDF 1.4 Byte-stream)                                                 |
 
+### Estructura de la Base de Datos (Relacional)
+El diagrama entidad-relación principal se centra en el ciclo de vida de la reserva:
+`Solicitante` ➔ (realiza) ➔ `Solicitud` ➔ (si es aprobada, se convierte en) ➔ `Evento` ➔ (ocupa) ➔ `Sala_Evento` ➔ `Sala`
+
+Tablas involucradas:
+- `usuarios`: Administradores con acceso al panel.
+- `solicitante`: Datos de contacto de la persona u organización.
+- `solicitud`: Intención de reserva, fecha, horas sugeridas y asistentes.
+- `requerimientos`: Servicios adicionales (audio, proyector, catering).
+- `evento`: Confirmación programada de una solicitud en tiempo real.
+- `sala`: Catálogo de ubicaciones físicas y su capacidad técnica.
+- `sala_evento`: Relación N:M para eventos que ocupan múltiples salas simultáneamente.
+
+---
+
+## 📂 Estructura del Proyecto
+
+```text
+modd-gestion-salas/
+├── alembic/                # Configuraciones y scripts de migraciones DB
+├── app/
+│   ├── core/               # Núcleo: Configuración de entorno, conexión a BD, Seguridad (JWT)
+│   ├── models/             # ORM: Modelos SQLAlchemy que mapean las tablas en BD
+│   ├── routers/            # Controladores: 
+│   │   ├── views.py        # ➔ Renderizado SSR de Jinja2
+│   │   └── api_*.py        # ➔ Endpoints RESTful para comunicación asíncrona con el Frontend
+│   ├── schemas/            # Validación de datos con Pydantic (Request/Response)
+│   ├── static/             # Archivos estáticos: CSS (Tailwind/Custom), JS, Imágenes, Favicons
+│   └── templates/          # Vistas HTML, componentes (base.html) y modales de la interfaz
+├── scripts/                # Herramientas de soporte (Población de datos Demo, Verificadores)
+├── requirements.txt        # Dependencias de Python
+└── README.md               # Documentación principal
+```
+
+---
+
+## ⚙️ Instalación y Configuración (Desarrollo)
+
+### Prerrequisitos
+- **Python 3.10+** (Recomendado 3.11)
+- **PostgreSQL** instalado y ejecutándose.
+
+### 1. Clonar el repositorio
 ```bash
 git clone <url-del-repositorio>
 cd modd-gestion-salas
 ```
 
-2. Crear y activar entorno virtual:
-
+### 2. Entorno Virtual y Dependencias
+Crea un entorno virtual para aislar las dependencias del proyecto:
 ```bash
 python -m venv venv
-venv\Scripts\activate
-```
-
-3. Instalar dependencias:
-
-```bash
+venv\Scripts\activate   # En Windows
+# source venv/bin/activate # En Linux/Mac
 pip install -r requirements.txt
 ```
 
-4. Crear base de datos en PostgreSQL:
-
+### 3. Configuración de Base de Datos
+En tu motor de PostgreSQL, crea la base de datos y un usuario (opcional):
 ```sql
 CREATE DATABASE modd_db;
-```
-
-Si necesitas crear usuario:
-
-```sql
 CREATE USER modd_user WITH PASSWORD 'tu_password';
 GRANT ALL PRIVILEGES ON DATABASE modd_db TO modd_user;
 ```
 
-5. Crear `.env.local` en la raiz:
-
+Crea un archivo `.env.local` en la raíz del proyecto (basándote en `.env.example`):
 ```env
 DATABASE_URL=postgresql://modd_user:tu_password@localhost:5432/modd_db
-SECRET_KEY=cambia_esta_llave_por_una_segura
+SECRET_KEY=clave_secreta_para_firmar_jwt
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-Puedes usar `.env.example` como referencia.
-
-## Migraciones
-
-Aplicar estructura de base de datos:
-
+### 4. Migraciones y Población de Datos
+Construye la estructura de tablas inicial:
 ```bash
 alembic upgrade head
 ```
 
-## Usuario Administrador
-
-Para crear o forzar el usuario administrador local:
-
-```bash
-python forzar_admin.py
-```
-
-Credenciales usadas en desarrollo:
-
-- Usuario: `admin@unison.mx`
-- Contrasena: `modd2026`
-
-## Datos Demo
-
-Para reiniciar y llenar datos de prueba:
-
+Opcionalmente, inyecta datos de prueba para experimentar con el sistema:
 ```bash
 python scripts/seed_demo.py
 ```
 
-El script crea salas, solicitantes, solicitudes, requerimientos y eventos consistentes con el modelo relacional.
+### 5. Crear Usuario Administrador
+Fuerza la creación de un usuario administrador local predeterminado:
+```bash
+python forzar_admin.py
+```
+*Credenciales de desarrollo: `admin@unison.mx` / `modd2026`*
 
-## Ejecutar
-
+### 6. Ejecutar Servidor de Desarrollo
 ```bash
 uvicorn app.main:app --reload
 ```
+La aplicación estará disponible en: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-Abrir:
+---
 
-```text
-http://127.0.0.1:8000
-```
+## 🌐 APIs Principales
+El sistema expone endpoints seguros bajo `/api/` y los agrupa lógicamente:
+- **Autenticación:** `/api/auth/login` (Generación JWT), `/api/auth/logout`.
+- **Eventos:** Lógica de CRUD, asignación inteligente y Drag&Drop (`PUT /api/eventos/{id}`).
+- **Solicitudes:** Aprobación (convierte Solicitud en Evento) y edición de estado (`PATCH /api/solicitudes/{id}/estado`).
+- **Reportes:** Generación de resúmenes estadísticos y conversión de HTML a PDF (`GET /api/reportes/pdf`).
 
-## Rutas Principales
+Toda la documentación técnica automática e interactiva (Swagger) está disponible internamente en `/docs` si está activado en el entorno.
 
-- `/` landing
-- `/login` inicio de sesion
-- `/dashboard` panel principal
-- `/calendario` calendario interactivo
-- `/solicitudes` gestion de solicitudes
-- `/eventos` listado de eventos
-- `/reportes` generacion de PDF
+---
 
-Las rutas internas requieren sesion activa.
-
-## APIs Principales
-
-- `POST /api/auth/login`
-- `GET /api/auth/logout`
-- `GET /api/eventos/`
-- `GET /api/eventos/?solo_aprobadas=true`
-- `PUT /api/eventos/{id_evento}`
-- `DELETE /api/eventos/{id_evento}`
-- `GET /api/solicitudes/`
-- `POST /api/solicitudes/`
-- `PUT /api/solicitudes/{id_solicitud}`
-- `PATCH /api/solicitudes/{id_solicitud}/estado`
-- `DELETE /api/solicitudes/{id_solicitud}`
-- `GET /api/reportes/resumen`
-- `GET /api/reportes/pdf`
-
-## Verificacion Rapida en SQL
-
-Eventos con salas:
-
-```sql
-SELECT
-    e.id_evento,
-    e.titulo,
-    e.fecha,
-    e.hora_de_inicio,
-    e.hora_de_termino,
-    string_agg('Sala ' || se.numero_sala::text, ', ' ORDER BY se.numero_sala) AS salas
-FROM evento e
-LEFT JOIN sala_evento se ON se.id_evento = e.id_evento
-GROUP BY e.id_evento, e.titulo, e.fecha, e.hora_de_inicio, e.hora_de_termino
-ORDER BY e.fecha, e.hora_de_inicio;
-```
-
-Solicitudes con solicitante:
-
-```sql
-SELECT
-    so.id_solicitud,
-    so.estado,
-    s.nombre,
-    s.apellido,
-    s.correo
-FROM solicitud so
-JOIN solicitante s ON s.id_solicitante = so.id_solicitante
-ORDER BY so.id_solicitud;
-```
-
-## Estructura
-
-```text
-modd-gestion-salas/
-├── alembic/
-│   ├── env.py
-│   └── versions/
-├── app/
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   └── security.py
-│   ├── models/
-│   │   ├── salas.py
-│   │   └── usuarios.py
-│   ├── routers/
-│   │   ├── api_auth.py
-│   │   ├── api_eventos.py
-│   │   ├── api_reportes.py
-│   │   ├── api_salas.py
-│   │   ├── api_solicitudes.py
-│   │   └── views.py
-│   ├── schemas/
-│   ├── static/
-│   └── templates/
-├── scripts/
-│   ├── check_overlaps.py
-│   └── seed_demo.py
-├── alembic.ini
-├── requirements.txt
-└── README.md
-```
-
-## Integrantes
+## 👥 Integrantes del Equipo
 
 - Daniel Eduardo Alvarez Terrazas
 - Melina Gonzalez Mendez

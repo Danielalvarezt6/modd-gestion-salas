@@ -75,8 +75,8 @@
   --muted: #b7c0d6;
   --border: #30384d;
   --blue-50: rgba(91, 123, 214, 0.16);
-  --blue-600: #8da8ff;
-  --blue-700: #6f8be8;
+  --blue-600: #5b7bd6;
+  --blue-700: #4a6bc9;
   --gold: #f4cd56;
   --green: #85d17b;
   --red: #ff7770;
@@ -191,11 +191,12 @@ body {
   padding: 0 0.5rem;
 }
 
-.admin-brand img {
-  height: 2.5rem;
-  object-fit: contain;
-  width: 2.5rem;
-}
+  .admin-brand img {
+    height: 2.5rem;
+    object-fit: contain;
+    width: auto;
+    flex-shrink: 0;
+  }
 
 .admin-brand h1 {
   color: var(--blue-600, var(--color-azul-institucional));
@@ -1489,8 +1490,8 @@ select:focus {
 .modd-week-grid {
   --hour-height: 74px;
   display: grid;
-  grid-template-columns: 72px repeat(var(--day-count, 7), minmax(260px, 1fr));
-  min-width: 1160px;
+  grid-template-columns: 72px repeat(var(--day-count, 7), minmax(420px, 1fr));
+  min-width: 1200px;
   position: relative;
 }
 
@@ -1619,8 +1620,9 @@ select:focus {
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.15;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modd-event-meta,
@@ -1631,8 +1633,9 @@ select:focus {
   font-weight: 700;
   line-height: 1.2;
   margin-top: 0.12rem;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modd-resize-handle {
@@ -1810,6 +1813,10 @@ select:focus {
   margin-top: 1.25rem;
 }
 
+.modd-form-span {
+  grid-column: 1 / -1;
+}
+
 .modd-form-grid label,
 .modd-notes-field {
   display: grid;
@@ -1856,7 +1863,7 @@ select:focus {
   border: 0;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   margin: 0;
   padding: 0;
 }
@@ -1927,49 +1934,6 @@ select:focus {
   flex: 1;
 }
 
-.modd-event-card {
-  background: var(--event-color, #24398A);
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  font-size: 0.75rem;
-  left: 0;
-  overflow: hidden;
-  padding: 0.5rem;
-  position: absolute;
-  top: 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  width: 100%;
-  z-index: 10;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.modd-event-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-  z-index: 20;
-}
-
-.modd-event-card strong {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.modd-event-card span {
-  opacity: 0.9;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* Make FullCalendar native events match our beautiful custom cards */
 .fc-event, .fc-timegrid-event, .fc-daygrid-event {
@@ -2283,7 +2247,7 @@ select:focus {
   }
 
   .modd-week-grid {
-    grid-template-columns: 64px repeat(var(--day-count, 7), minmax(220px, 1fr));
+    grid-template-columns: 64px repeat(var(--day-count, 7), minmax(360px, 1fr));
     min-width: 960px;
   }
 }
@@ -2361,7 +2325,7 @@ select:focus {
   [data-theme="dark"] .sidebar-nav a.active, 
   [data-theme="dark"] .admin-nav a.active, 
   [data-theme="dark"] .admin-sidebar-nav a.active {
-    color: var(--blue-600, #8da8ff) !important;
+    color: var(--blue-600, #5b7bd6) !important;
   }
 
   /* Hide the hamburger toggle buttons completely */
@@ -3095,4 +3059,315 @@ select:focus {
   .mobile-day-card .mobile-card-resp {
     display: none;
   }
+}
+
+/* Custom Icon Button Colors for Actions */
+.admin-icon-button.view-btn { color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-color: transparent; }
+.admin-icon-button.view-btn:hover { background: rgba(59, 130, 246, 0.2); }
+
+.admin-icon-button.approve-btn { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: transparent; }
+.admin-icon-button.approve-btn:hover { background: rgba(16, 185, 129, 0.2); }
+
+.admin-icon-button.reject-btn { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-color: transparent; }
+  .mobile-card-time {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .mobile-card-title {
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .mobile-card-resp {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .mobile-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-radius: 12px;
+    border: 2px dashed var(--border);
+    gap: 0.5rem;
+  }
+
+  .mobile-month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mobile-month-nav button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    margin-left: 0.25rem;
+  }
+
+  .mobile-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .mobile-month-dow {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .mobile-month-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    font-size: 0.95rem;
+    font-weight: 600;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .mobile-month-day.active {
+    background: var(--blue-600);
+    color: white;
+  }
+
+  .mobile-month-dots {
+    display: flex;
+    gap: 2px;
+    position: absolute;
+    bottom: 2px;
+  }
+
+  .mobile-month-dots i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+
+  .mobile-day-header {
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .mobile-day-current {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+
+  .mobile-day-current strong {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .mobile-day-current span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .mobile-day-timeline {
+    position: relative;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 1rem 0;
+    overflow: hidden;
+  }
+
+  .mobile-time-slot {
+    display: flex;
+    position: relative;
+    padding-left: 0.5rem;
+  }
+
+  .mobile-time-slot span {
+    width: 3.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: -0.4rem;
+  }
+
+  .mobile-time-line {
+    flex: 1;
+    border-top: 1px solid var(--border);
+  }
+
+  .mobile-day-events-layer {
+    position: absolute;
+    top: 1rem; /* match timeline padding-top */
+    left: 4.5rem;
+    right: 0.5rem;
+    bottom: 0;
+  }
+
+  .mobile-day-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--event-color) 8%, white);
+    border-left: 4px solid var(--event-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    z-index: 10;
+  }
+
+  .mobile-day-card .mobile-card-title {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-day-card .mobile-list-card-header {
+    font-size: 0.75rem;
+    margin-bottom: 0.15rem;
+  }
+
+/* Custom Icon Button Colors for Actions */
+.admin-icon-button.view-btn { color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-color: transparent; }
+.admin-icon-button.view-btn:hover { background: rgba(59, 130, 246, 0.2); }
+
+.admin-icon-button.approve-btn { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: transparent; }
+.admin-icon-button.approve-btn:hover { background: rgba(16, 185, 129, 0.2); }
+
+.admin-icon-button.reject-btn { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-color: transparent; }
+.admin-icon-button.reject-btn:hover { background: rgba(239, 68, 68, 0.2); }
+
+.admin-icon-button.edit-btn { color: #f59e0b; background: rgba(245, 158, 11, 0.1); border-color: transparent; }
+.admin-icon-button.edit-btn:hover { background: rgba(245, 158, 11, 0.2); }
+
+.admin-icon-button.delete-btn { color: #6b7280; background: rgba(107, 114, 128, 0.1); border-color: transparent; }
+.admin-icon-button.delete-btn:hover { background: rgba(107, 114, 128, 0.2); }
+
+[data-theme="dark"] .admin-icon-button.view-btn { color: #60a5fa; background: rgba(96, 165, 250, 0.15); }
+[data-theme="dark"] .admin-icon-button.approve-btn { color: #34d399; background: rgba(52, 211, 153, 0.15); }
+[data-theme="dark"] .admin-icon-button.reject-btn { color: #f87171; background: rgba(248, 113, 113, 0.15); }
+[data-theme="dark"] .admin-icon-button.edit-btn { color: #fbbf24; background: rgba(251, 191, 36, 0.15); }
+[data-theme="dark"] .admin-icon-button.delete-btn { color: #9ca3af; background: rgba(156, 163, 175, 0.15); }
+
+.admin-action-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-export-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border, #30384d);
+  border-radius: 8px;
+  color: var(--text, #f3f6ff);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.admin-export-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+@media print {
+  /* Ocultar elementos innecesarios */
+  #sidebar, .admin-sidebar, .app-sidebar,
+  .admin-topbar-actions, .topbar-right,
+  .admin-action-row, .admin-filter-row,
+  .admin-stat-grid, #page-toast,
+  .modd-modal, .admin-menu-toggle,
+  .sidebar-toggle, .admin-export-button {
+    display: none !important;
+  }
+
+  /* Ajustar el layout principal */
+  body, .page-shell, .admin-shell, .admin-main, .page-main {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .topbar, .admin-topbar {
+    border-bottom: 2px solid #ccc !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+    color: #000 !important;
+  }
+
+  .topbar h2, .admin-title h2 {
+    color: #000 !important;
+  }
+
+  /* Ajustes para tablas y tarjetas */
+  .admin-table {
+    border: 1px solid #ddd !important;
+    width: 100% !important;
+  }
+
+  .admin-table th, .admin-table td {
+    border: 1px solid #ddd !important;
+    color: #000 !important;
+    padding: 0.5rem !important;
+  }
+
+  .modd-calendar-shell {
+    border: 1px solid #ddd !important;
+    background: #fff !important;
+  }
+
+  /* Ocultar scrollbars */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+/* FullCalendar Header Fixes */
+[data-theme="dark"] .fc-theme-standard th, 
+[data-theme="dark"] .fc .fc-col-header-cell { 
+  background-color: var(--surface) !important; 
+  color: var(--text) !important; 
+}
+[data-theme="dark"] .fc-col-header-cell-cushion { 
+  color: var(--text) !important; 
+}
+
+/* Fix browser native date picker icon color in dark mode */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
