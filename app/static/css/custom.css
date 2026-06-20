@@ -2050,6 +2050,109 @@ select:focus {
 @media (max-width: 768px) {
   body {
     overflow-x: hidden;
+    padding-bottom: 80px; /* Space for the bottom nav */
+  }
+
+  /* ── 1. BOTTOM NAVIGATION (App-like) ── */
+  .app-sidebar, .admin-sidebar, .sidebar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    height: 72px !important;
+    transform: none !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid var(--border) !important;
+    border-right: none !important;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.06) !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+  }
+
+  [data-theme="dark"] .app-sidebar, 
+  [data-theme="dark"] .admin-sidebar, 
+  [data-theme="dark"] .sidebar {
+    background: rgba(20, 20, 25, 0.85) !important;
+  }
+
+  /* Hide headers and footers in bottom nav */
+  .sidebar-brand, .admin-sidebar-header, .sidebar-divider, .admin-sidebar-footer, .sidebar-footer {
+    display: none !important;
+  }
+
+  .sidebar-nav, .admin-sidebar-nav {
+    flex-direction: row !important;
+    width: 100% !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 0 0.5rem !important;
+    gap: 0 !important;
+  }
+
+  .sidebar-nav a, .admin-sidebar-nav a {
+    flex-direction: column !important;
+    padding: 0.5rem 0 !important;
+    gap: 0.35rem !important;
+    flex: 1 !important;
+    text-align: center !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .sidebar-nav a i, .admin-sidebar-nav a i {
+    margin: 0 auto !important;
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+  }
+
+  .sidebar-nav a.active, .admin-sidebar-nav a.active {
+    color: var(--blue-600, #24398A) !important;
+  }
+
+  [data-theme="dark"] .sidebar-nav a.active, 
+  [data-theme="dark"] .admin-sidebar-nav a.active {
+    color: var(--blue-600, #8da8ff) !important;
+  }
+
+  /* Hide the hamburger toggle buttons completely */
+  .sidebar-toggle, .admin-menu-toggle {
+    display: none !important;
+  }
+
+  .admin-shell, .page-shell {
+    display: block !important;
+    min-height: 100vh;
+  }
+
+  /* ── 2. FLOATING ACTION BUTTON (FAB) ── */
+  #calendar-new-event, 
+  #quick-new-event, 
+  .admin-topbar-actions .admin-primary-button {
+    position: fixed !important;
+    bottom: 90px !important;
+    right: 20px !important;
+    z-index: 900 !important;
+    border-radius: 50px !important;
+    box-shadow: 0 8px 24px rgba(36, 57, 138, 0.4) !important;
+    min-height: 56px !important;
+    padding: 0 1.5rem !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    width: auto !important;
+  }
+
+  [data-theme="dark"] #calendar-new-event, 
+  [data-theme="dark"] #quick-new-event, 
+  [data-theme="dark"] .admin-topbar-actions .admin-primary-button {
+    box-shadow: 0 8px 24px rgba(141, 168, 255, 0.3) !important;
   }
 
   .admin-shell,
@@ -2060,8 +2163,11 @@ select:focus {
 
   .admin-topbar,
   .topbar {
+    padding-top: 1rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
     gap: 0.85rem !important;
-    margin-bottom: 1rem !important;
+    margin-bottom: 1.5rem !important;
   }
 
   .admin-title,
@@ -2072,16 +2178,19 @@ select:focus {
 
   .admin-title h2,
   .topbar h2 {
-    font-size: 1.35rem !important;
+    font-size: 1.45rem !important;
+    font-weight: 800 !important;
   }
 
   .admin-title p,
   .topbar p {
-    font-size: 0.82rem !important;
+    font-size: 0.85rem !important;
+    opacity: 0.8;
   }
 
-  .admin-topbar-actions {
+  .admin-topbar-actions, .topbar-right {
     width: 100%;
+    justify-content: flex-start !important;
   }
 
   .admin-user-badge {
@@ -2093,19 +2202,23 @@ select:focus {
   .modd-secondary-action,
   .modd-danger-action {
     min-height: 2.75rem;
+    border-radius: 12px;
   }
 
   .admin-stat-grid {
-    gap: 0.75rem;
+    gap: 1rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .admin-stat-card {
-    padding: 1rem;
+    padding: 1.25rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
 
   .admin-filter-row {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
   .admin-panel {
@@ -2121,7 +2234,7 @@ select:focus {
 
   .admin-table {
     border-collapse: separate;
-    border-spacing: 0 0.85rem;
+    border-spacing: 0 1rem;
     min-width: 0;
   }
 
@@ -2139,8 +2252,9 @@ select:focus {
   .admin-table tr {
     background: var(--surface, #fff);
     border: 1px solid var(--border, var(--color-border));
-    border-radius: 0.8rem;
-    box-shadow: var(--shadow-sm);
+    border-radius: 16px !important;
+    padding: 1.25rem !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05) !important;
     overflow: hidden;
   }
 
@@ -2222,8 +2336,8 @@ select:focus {
 
   .modd-week-grid {
     --hour-height: 68px;
-    grid-template-columns: 58px repeat(var(--day-count, 7), minmax(190px, 1fr));
-    min-width: 820px;
+    grid-template-columns: 58px repeat(var(--day-count, 7), minmax(280px, 1fr));
+    min-width: max-content;
   }
 
   .modd-fullcalendar-wrap {
@@ -2365,6 +2479,34 @@ select:focus {
     flex-basis: 100%;
   }
 
+  /* ── 4. SEGMENTED CONTROLS ── */
+  .modd-view-toggle, .admin-filter-tabs {
+    background: var(--bg-hover) !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    display: flex !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .modd-view-toggle button, .admin-filter-tabs button {
+    flex: 1 !important;
+    border-radius: 8px !important;
+    padding: 0.5rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .modd-view-toggle button.active, .admin-filter-tabs button.active {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  }
+
   .modd-week-nav {
     display: grid;
     grid-template-columns: 2.4rem 1fr 2.4rem;
@@ -2382,8 +2524,8 @@ select:focus {
 
   .modd-week-grid {
     --hour-height: 64px;
-    grid-template-columns: 52px repeat(var(--day-count, 7), minmax(170px, 1fr));
-    min-width: 720px;
+    grid-template-columns: 52px repeat(var(--day-count, 7), minmax(280px, 1fr));
+    min-width: max-content;
   }
 
   .modd-event-card {
