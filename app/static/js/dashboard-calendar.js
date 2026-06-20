@@ -17,7 +17,7 @@
   let visibleRooms = rooms.map((room) => room.id);
   let searchTerm = '';
   let fullCalendar = null;
-  let activeView = 'week';
+  let activeView = window.innerWidth <= 768 ? 'day' : 'week';
   let dragState = null;
   let activeGuide = null;
   let alertTimer = null;
@@ -27,7 +27,7 @@
   async function initCalendarModule() {
     await cargarEventosDesdeApi();
     bindControls();
-    renderWeekCalendar();
+    setCalendarView(activeView);
     initFullCalendar();
     renderFullCalendarEvents();
   }
