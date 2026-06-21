@@ -51,9 +51,26 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
     msg.attach(MIMEText(mensaje_texto, 'plain', 'utf-8'))
 
     try:
-        # Enviar el correo usando SMTP (STARTTLS)
-        server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT)
-        server.starttls()
+        # Algunos contenedores (como Render) fallan con IPv6 al contactar a Gmail (Errno 101)
+        # source_address=('0.0.0.0', 0) fuerza a que use IPv4.
+        import socket
+        
+        if settings.SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(
+                settings.SMTP_SERVER, 
+                settings.SMTP_PORT, 
+                timeout=10, 
+                source_address=('0.0.0.0', 0)
+            )
+        else:
+            server = smtplib.SMTP(
+                settings.SMTP_SERVER, 
+                settings.SMTP_PORT, 
+                timeout=10, 
+                source_address=('0.0.0.0', 0)
+            )
+            server.starttls()
+            
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()

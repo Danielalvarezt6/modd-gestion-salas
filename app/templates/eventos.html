@@ -316,7 +316,7 @@
       tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados en la base de datos.</td></tr>';
       rows = [];
       try {
-        const response = await fetch('/api/eventos/');
+        const response = await fetch('/api/eventos/?solo_aprobadas=true');
         if (!response.ok) throw new Error('No se pudieron cargar eventos.');
         let events = await response.json();
         events.reverse(); // Show most recent first
