@@ -785,7 +785,7 @@
     async function loadDashboardData() {
       try {
         const [eventsResponse, requestsResponse] = await Promise.all([
-          fetch('/api/eventos/'),
+          fetch('/api/eventos/?solo_aprobadas=true'),
           fetch('/api/solicitudes/')
         ]);
         if (!eventsResponse.ok || !requestsResponse.ok) {

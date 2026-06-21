@@ -52,29 +52,40 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
 
     try:
         # Algunos contenedores (como Render) fallan con IPv6 al contactar a Gmail (Errno 101)
-        # source_address=('0.0.0.0', 0) fuerza a que use IPv4.
+        # La forma más segura de forzar IPv4 sin causar "Address family not supported" es 
+        # filtrar los resultados de DNS temporalmente.
         import socket
         
-        if settings.SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(
-                settings.SMTP_SERVER, 
-                settings.SMTP_PORT, 
-                timeout=10, 
-                source_address=('0.0.0.0', 0)
-            )
-        else:
-            server = smtplib.SMTP(
-                settings.SMTP_SERVER, 
-                settings.SMTP_PORT, 
-                timeout=10, 
-                source_address=('0.0.0.0', 0)
-            )
-            server.starttls()
+        old_getaddrinfo = socket.getaddrinfo
+        def ipv4_getaddrinfo(*args, **kwargs):
+            responses = old_getaddrinfo(*args, **kwargs)
+            return [r for r in responses if r[0] == socket.AF_INET]
             
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        print(f"Correo de resolución ({estado}) enviado a {to_email}")
+        socket.getaddrinfo = ipv4_getaddrinfo
+        
+        try:
+            if int(settings.SMTP_PORT) == 465:
+                server = smtplib.SMTP_SSL(
+                    settings.SMTP_SERVER, 
+                    int(settings.SMTP_PORT), 
+                    timeout=15
+                )
+            else:
+                server = smtplib.SMTP(
+                    settings.SMTP_SERVER, 
+                    int(settings.SMTP_PORT), 
+                    timeout=15
+                )
+                server.starttls()
+                
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print(f"Correo de resolución ({estado}) enviado a {to_email}")
+        finally:
+            # Restaurar el comportamiento normal de DNS
+            socket.getaddrinfo = old_getaddrinfo
+            
     except Exception as e:
         print(f"Error enviando correo a {to_email}: {str(e)}")
 
