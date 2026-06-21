@@ -25,15 +25,16 @@ El sistema fue desarrollado con un backend robusto basado en **FastAPI** y una i
 
 ## 🏗️ Arquitectura y Tecnologías
 
-El proyecto sigue una arquitectura **MVC-like** adaptada al ecosistema de FastAPI.
+El proyecto sigue una arquitectura **MVC-like** adaptada al ecosistema de FastAPI y está optimizado para su despliegue en la nube. Actualmente, la aplicación se encuentra alojada en **Render** (servidor web) y utiliza **Neon** (base de datos PostgreSQL Serverless).
 
 ### Stack Tecnológico
 | Capa         | Tecnologías                                                                 |
 |--------------|-----------------------------------------------------------------------------|
 | **Backend**  | Python 3.10+, FastAPI, Pydantic, SQLAlchemy, Alembic                        |
-| **Base de Datos** | PostgreSQL 14+                                                            |
+| **Base de Datos** | PostgreSQL 14+ (alojada en **Neon Tech**)                                   |
 | **Frontend** | HTML5, CSS Variables, Tailwind CSS, JavaScript (ES6), FullCalendar, Lucide Icons |
 | **Generación PDF** | Motor Nativo (Direct PDF 1.4 Byte-stream)                                                 |
+| **Infraestructura**| **Render** (Web Service), Gunicorn, Uvicorn                                  |
 
 ### Estructura de la Base de Datos (Relacional)
 El diagrama entidad-relación principal se centra en el ciclo de vida de la reserva:

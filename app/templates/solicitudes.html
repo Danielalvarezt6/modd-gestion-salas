@@ -135,6 +135,8 @@
       </button>
     </div>
 
+    <div id="request-create-warning" style="display: none; background: #fffbeb; color: #92400e; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #f59e0b; font-weight: 600; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.4;"></div>
+
     <div class="modd-form-grid">
       <label>
         Nombre
@@ -342,6 +344,18 @@
       document.body.style.overflow = 'hidden';
     }
 
+    function parseDescriptionAlert(desc) {
+      if (!desc) return { text: '', alert: '' };
+      const match = desc.match(/\[ALERTA_SISTEMA\](.*?)\[\/ALERTA_SISTEMA\]/s);
+      if (match) {
+        return {
+          text: desc.replace(match[0], '').trim(),
+          alert: match[1].trim()
+        };
+      }
+      return { text: desc.trim(), alert: '' };
+    }
+
     function openEditRequest(row) {
       editingRequestId = row.dataset.id;
       createForm?.reset();
@@ -349,12 +363,22 @@
       document.getElementById('request-create-title').textContent = 'Editar solicitud';
       createForm.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
 
+      const parsed = parseDescriptionAlert(row.dataset.description);
+      const warningBox = document.getElementById('request-create-warning');
+      if (parsed.alert) {
+        warningBox.textContent = parsed.alert;
+        warningBox.style.display = 'block';
+      } else {
+        warningBox.style.display = 'none';
+        warningBox.textContent = '';
+      }
+
       createForm.elements.solicitante_nombre.value = row.dataset.firstName || '';
       createForm.elements.solicitante_apellido.value = row.dataset.lastName || '';
       createForm.elements.solicitante_correo.value = row.dataset.email || '';
       createForm.elements.solicitante_telefono.value = row.dataset.phone || '';
       createForm.elements.evento_titulo.value = row.dataset.eventTitle || '';
-      createForm.elements.evento_descripcion.value = row.dataset.description || '';
+      createForm.elements.evento_descripcion.value = parsed.text;
       createForm.elements.evento_fecha.value = row.dataset.eventDate || '';
       createForm.elements.evento_inicio.value = (row.dataset.start || '08:00:00').slice(0, 5);
       createForm.elements.evento_fin.value = (row.dataset.end || '09:00:00').slice(0, 5);
@@ -437,7 +461,8 @@
       try {
         const response = await fetch('/api/solicitudes/');
         if (!response.ok) throw new Error('No se pudieron cargar solicitudes.');
-        const requests = await response.json();
+        let requests = await response.json();
+        requests.reverse(); // Show most recent first
         if (!requests.length) {
           tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
           rows = [];
@@ -554,11 +579,12 @@
       const id = row.dataset.id;
       document.getElementById('request-detail-title').textContent = `Solicitud ${id || ''}`;
       
+      const parsed = parseDescriptionAlert(row.dataset.description);
       let warningHtml = '';
-      if (row.dataset.warning) {
+      if (row.dataset.warning || parsed.alert) {
         warningHtml = `
           <div style="grid-column: 1 / -1; background: #fffbeb; color: #92400e; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #f59e0b; font-weight: 600; display: flex; align-items: center; gap: 0.75rem;">
-            ${escapeHTML(row.dataset.warning)}
+            ${escapeHTML(row.dataset.warning || parsed.alert)}
           </div>
         `;
       }
@@ -568,7 +594,7 @@
       const telefono = row.dataset.phone || 'Sin telefono';
       const solicitanteHtml = `${escapeHTML(nombre.trim())}<br><span style="font-weight:normal; opacity:0.8">${escapeHTML(correo)}<br>${escapeHTML(telefono)}</span>`;
 
-      const eventoHtml = `${escapeHTML(row.dataset.eventTitle || 'Sin evento')}<br><span style="font-weight:normal; opacity:0.8">${escapeHTML(row.dataset.description || 'Sin descripcion')}<br>${row.dataset.attendees} asistentes</span>`;
+      const eventoHtml = `${escapeHTML(row.dataset.eventTitle || 'Sin evento')}<br><span style="font-weight:normal; opacity:0.8">${escapeHTML(parsed.text || 'Sin descripcion')}<br>${row.dataset.attendees} asistentes</span>`;
 
       const cells = Array.from(row.children).map(function (cell) { return cell.innerText.trim(); });
 

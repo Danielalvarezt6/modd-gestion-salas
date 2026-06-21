@@ -318,7 +318,8 @@
       try {
         const response = await fetch('/api/eventos/');
         if (!response.ok) throw new Error('No se pudieron cargar eventos.');
-        const events = await response.json();
+        let events = await response.json();
+        events.reverse(); // Show most recent first
         if (!events.length) {
           tableBody.innerHTML = '<tr><td colspan="7" class="admin-muted">No hay eventos registrados. Crea y aprueba una solicitud para generar un evento.</td></tr>';
           rows = [];
@@ -333,11 +334,18 @@
           const requester = item.solicitud?.solicitante || {};
           const responsible = [requester.nombre, requester.apellido].filter(Boolean).join(' ') || 'Solicitante no asignado';
 
-          const searchText = [item.titulo, item.descripcion, responsible, roomNames].join(' ').toLowerCase();
+          const rawDesc = item.descripcion || '';
+          let cleanDesc = rawDesc;
+          const match = rawDesc.match(/\[ALERTA_SISTEMA\](.*?)\[\/ALERTA_SISTEMA\]/s);
+          if (match) {
+            cleanDesc = rawDesc.replace(match[0], '').trim();
+          }
+
+          const searchText = [item.titulo, cleanDesc, responsible, roomNames].join(' ').toLowerCase();
 
           return `
-            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-room-ids="${escapeAttr(roomIds.join(','))}" data-description="${escapeAttr(item.descripcion || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
-              <td data-label="Evento"><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(item.descripcion || 'Sin descripcion')}</div></div></td>
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-room-ids="${escapeAttr(roomIds.join(','))}" data-description="${escapeAttr(cleanDesc || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
+              <td data-label="Evento"><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(cleanDesc || 'Sin descripcion')}</div></div></td>
               <td data-label="Responsable">${escapeHTML(responsible)}</td>
               <td data-label="Sala"><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
               <td data-label="Dia">${formatDate(item.fecha)}</td>

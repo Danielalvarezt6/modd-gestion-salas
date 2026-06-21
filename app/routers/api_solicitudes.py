@@ -288,9 +288,9 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
     try:
         salas = _validar_solape_evento(payload, db)
     except HTTPException as e:
-        if e.status_code in (status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_ENTITY):
+        if payload.salas_ids is None and e.status_code in (status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_ENTITY):
             salas = []
-            advertencia = f"⚠️ ALERTA DEL SISTEMA: {e.detail}"
+            advertencia = f"[ALERTA_SISTEMA]{e.detail}[/ALERTA_SISTEMA]"
         else:
             raise
 
