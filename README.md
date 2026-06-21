@@ -107,12 +107,16 @@ DATABASE_URL=postgresql://modd_user:tu_password@localhost:5432/modd_db
 SECRET_KEY=clave_secreta_para_firmar_jwt
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=gestiondesalasmodd@gmail.com
-SMTP_PASSWORD=tu_contraseña_de_aplicacion_gmail
-FROM_EMAIL=gestiondesalasmodd@gmail.com
+GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/tu_id_secreto/exec
 ```
+
+### ✉️ Configuración de Envío de Correos (Webhook de Google)
+Para superar las restricciones de los servidores gratuitos (como Render) que bloquean puertos SMTP (587/465) para prevenir el spam, el sistema de correos de MODD utiliza una arquitectura basada en **Webhooks por HTTPS (puerto 443)**.
+1. La aplicación empaqueta el contenido del correo (destinatario, asunto, cuerpo) en un JSON.
+2. Realiza una petición `POST` segura a una URL proporcionada por **Google Apps Script**.
+3. El script de Google recibe la información y despacha el correo nativamente usando la cuenta de Gmail autorizada (`gestiondesalasmodd@gmail.com`).
+
+Esto garantiza un 100% de entregabilidad sin incurrir en costos ni requerir verificación de dominios.
 
 ### 4. Migraciones y Población de Datos
 Construye la estructura de tablas inicial:
