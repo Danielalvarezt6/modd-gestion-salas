@@ -51,6 +51,7 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
     msg.attach(MIMEText(mensaje_texto, 'plain', 'utf-8'))
 
     try:
+        print(f"Intentando enviar correo a {to_email} vía {settings.SMTP_SERVER}:{settings.SMTP_PORT}...", flush=True)
         # Algunos contenedores (como Render) fallan con IPv6 al contactar a Gmail (Errno 101)
         # La forma más segura de forzar IPv4 sin causar "Address family not supported" es 
         # filtrar los resultados de DNS temporalmente.
@@ -81,11 +82,11 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
             server.quit()
-            print(f"Correo de resolución ({estado}) enviado a {to_email}")
+            print(f"Correo de resolución ({estado}) enviado a {to_email}", flush=True)
         finally:
             # Restaurar el comportamiento normal de DNS
             socket.getaddrinfo = old_getaddrinfo
             
     except Exception as e:
-        print(f"Error enviando correo a {to_email}: {str(e)}")
+        print(f"Error enviando correo a {to_email}: {str(e)}", flush=True)
 

@@ -294,14 +294,14 @@ async def crear_solicitud(payload: SolicitudEventoCreate, db: Session = Depends(
         else:
             raise
 
-    solicitante = db.query(Solicitante).filter(Solicitante.correo == payload.solicitante_correo).first()
-    if not solicitante:
-        solicitante = Solicitante(correo=payload.solicitante_correo)
-        db.add(solicitante)
-
-    solicitante.nombre = payload.solicitante_nombre
-    solicitante.apellido = payload.solicitante_apellido
-    solicitante.no_de_telefono = payload.solicitante_telefono
+    # Ahora permitimos múltiples solicitudes con el mismo correo pero diferente responsable
+    solicitante = Solicitante(
+        correo=payload.solicitante_correo,
+        nombre=payload.solicitante_nombre,
+        apellido=payload.solicitante_apellido,
+        no_de_telefono=payload.solicitante_telefono
+    )
+    db.add(solicitante)
 
     solicitud = Solicitud(
         fecha_solicitud=date.today(),

@@ -14,6 +14,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
+@app.on_event("startup")
+def configure_db_constraints():
+    from app.core.database import engine
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = 'solicitante' AND constraint_type = 'UNIQUE';"))
+            for r in res:
+                conn.execute(text(f"ALTER TABLE solicitante DROP CONSTRAINT {r[0]};"))
+            conn.execute(text("DROP INDEX IF EXISTS ix_solicitante_correo;"))
+            conn.commit()
+    except Exception as e:
+        print("Aviso: No se pudo modificar constraint de BD (puede que ya no exista):", e)
+
+
 # Configuración CORS para permitir que el frontend consuma la API
 app.add_middleware(
     CORSMiddleware,
