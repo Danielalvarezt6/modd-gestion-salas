@@ -1,22 +1,23 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import httpx
 from app.core.config import settings
 
 def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia: str, hora_inicio: str, hora_fin: str, comentario: str = ""):
     """
-    Envía un correo de notificación simple y directo al usuario cuando su solicitud
-    es aprobada o rechazada.
+    Envía un correo mediante un Webhook de Google Apps Script.
+    Esta es la técnica definitiva para usar tu propio Gmail personal
+    desde Render sin que bloqueen los puertos y sin necesitar un dominio privado.
     """
     if not to_email:
-        print("No se proporcionó correo para la solicitud. No se enviará notificación.")
+        print("No se proporcionó correo para la solicitud.", flush=True)
         return
 
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print(f"ADVERTENCIA: Credenciales SMTP no configuradas. Correo simulado a {to_email} con estado {estado}.")
+    # Usaremos la variable SMTP_SERVER o SMTP_PASSWORD para guardar la URL del Webhook
+    # (La URL larga que te dará Google). Si no está, simulamos el correo.
+    webhook_url = getattr(settings, "GOOGLE_SCRIPT_URL", settings.SMTP_SERVER)
+    
+    if not webhook_url or not webhook_url.startswith("https://script.google.com"):
+        print(f"ADVERTENCIA: Webhook de Google no configurado. Correo simulado a {to_email} con estado {estado}.", flush=True)
         return
-
-    from_email = settings.FROM_EMAIL or settings.SMTP_USER
 
     # Determinar el asunto y mensaje base
     if estado == "aprobada":
@@ -27,7 +28,8 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
             f"Detalles:\n"
             f"- Fecha: {dia}\n"
             f"- Horario: {hora_inicio} a {hora_fin}\n\n"
-            f"Tu espacio en la agenda está confirmado.\n"
+            f"Tu espacio en la agenda está confirmado.\n\n"
+            f"Saludos,\nAdministración de MODD."
         )
     else:
         asunto = f"Solicitud Rechazada - {titulo_evento}"
@@ -41,52 +43,26 @@ def enviar_correo_resolucion(to_email: str, estado: str, titulo_evento: str, dia
         )
         if comentario:
             mensaje_texto += f"Comentario adicional:\n{comentario}\n\n"
+            
+        mensaje_texto += "Saludos,\nAdministración de MODD."
 
-    mensaje_texto += "Saludos,\nAdministración de MODD."
-
-    msg = MIMEMultipart()
-    msg['From'] = from_email
-    msg['To'] = to_email
-    msg['Subject'] = asunto
-    msg.attach(MIMEText(mensaje_texto, 'plain', 'utf-8'))
+    payload = {
+        "to_email": to_email,
+        "subject": asunto,
+        "body": mensaje_texto
+    }
 
     try:
-        print(f"Intentando enviar correo a {to_email} vía {settings.SMTP_SERVER}:{settings.SMTP_PORT}...", flush=True)
-        # Algunos contenedores (como Render) fallan con IPv6 al contactar a Gmail (Errno 101)
-        # La forma más segura de forzar IPv4 sin causar "Address family not supported" es 
-        # filtrar los resultados de DNS temporalmente.
-        import socket
-        
-        old_getaddrinfo = socket.getaddrinfo
-        def ipv4_getaddrinfo(*args, **kwargs):
-            responses = old_getaddrinfo(*args, **kwargs)
-            return [r for r in responses if r[0] == socket.AF_INET]
+        print(f"Intentando enviar correo a {to_email} vía Google Apps Script...", flush=True)
+        # Sigue las redirecciones porque Google Script siempre redirige la primera vez
+        with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+            response = client.post(webhook_url, json=payload)
             
-        socket.getaddrinfo = ipv4_getaddrinfo
-        
-        try:
-            if int(settings.SMTP_PORT) == 465:
-                server = smtplib.SMTP_SSL(
-                    settings.SMTP_SERVER, 
-                    int(settings.SMTP_PORT), 
-                    timeout=15
-                )
+            if response.status_code == 200:
+                print(f"Correo de resolución ({estado}) enviado a {to_email} exitosamente por Google.", flush=True)
             else:
-                server = smtplib.SMTP(
-                    settings.SMTP_SERVER, 
-                    int(settings.SMTP_PORT), 
-                    timeout=15
-                )
-                server.starttls()
+                print(f"Google Script devolvió error HTTP {response.status_code}: {response.text}", flush=True)
                 
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.send_message(msg)
-            server.quit()
-            print(f"Correo de resolución ({estado}) enviado a {to_email}", flush=True)
-        finally:
-            # Restaurar el comportamiento normal de DNS
-            socket.getaddrinfo = old_getaddrinfo
-            
     except Exception as e:
-        print(f"Error enviando correo a {to_email}: {str(e)}", flush=True)
+        print(f"Error enviando correo por Google Script a {to_email}: {str(e)}", flush=True)
 
