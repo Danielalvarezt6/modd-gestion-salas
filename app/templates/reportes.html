@@ -74,63 +74,44 @@
         </div>
       </article>
 
-      <article class="report-card" data-search="informe por sala actividad sala periodo">
-        <div class="report-icon" style="--report-bg:rgba(148,103,33,.13);--report-color:#946721">
-          <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+      <article class="report-card" data-search="personalizado rango fechas salas reporte filtros" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+        <div style="display: flex; gap: 1rem;">
+          <div class="report-icon" style="--report-bg:rgba(225,183,61,.17);--report-color:#8a6200">
+            <i data-lucide="file-cog" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3>Reporte Personalizado</h3>
+            <p>Define rango de fechas, sala específica y el tipo de contenido a exportar.</p>
+            <button class="admin-primary-button mt-4" data-report-type="personalizado" type="button" style="width: 100%;">
+              <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
+            </button>
+          </div>
         </div>
-        <div>
-          <h3>Informe por Sala</h3>
-          <p>Actividad detallada de una sala especifica. Puedes combinarlo con las fechas de abajo.</p>
-          <label class="report-inline-field">
+        
+        <div class="filter-grid" style="background: var(--background); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+          <label>
+            Fecha inicio
+            <input class="admin-input" type="date" id="start-date">
+          </label>
+          <label>
+            Fecha fin
+            <input class="admin-input" type="date" id="end-date">
+          </label>
+          <label style="grid-column: 1 / -1;">
             Sala
-            <select class="admin-select" id="single-room-report">
-              <option value="">Selecciona una sala</option>
+            <select class="admin-select" id="report-room">
+              <option value="">Todas las salas</option>
               <option value="1">Sala 1</option>
               <option value="2">Sala 2</option>
               <option value="3">Sala 3</option>
             </select>
           </label>
-          <button class="admin-primary-button mt-4" data-report-type="sala" type="button">
-            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
-          </button>
+          <label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text);">
+            <input type="checkbox" id="report-operative" style="width: 1rem; height: 1rem; accent-color: var(--blue-600);">
+            Ocultar datos de contacto (Versión para personal operativo)
+          </label>
         </div>
       </article>
-
-      <article class="report-card" data-search="personalizado rango fechas salas reporte filtros">
-        <div class="report-icon" style="--report-bg:rgba(225,183,61,.17);--report-color:#8a6200">
-          <i data-lucide="file-cog" class="w-6 h-6"></i>
-        </div>
-        <div>
-          <h3>Reporte Personalizado</h3>
-          <p>Define rango de fechas y sala en los filtros de abajo para exportar.</p>
-          <button class="admin-primary-button mt-4" data-report-type="personalizado" type="button">
-            <i data-lucide="download" class="w-4 h-4"></i> Generar PDF
-          </button>
-        </div>
-      </article>
-    </section>
-
-    <section class="filter-panel">
-      <h3>Reporte personalizado</h3>
-      <div class="filter-grid">
-        <label>
-          Fecha inicio
-          <input class="admin-input" type="date" id="start-date">
-        </label>
-        <label>
-          Fecha fin
-          <input class="admin-input" type="date" id="end-date">
-        </label>
-        <label>
-          Sala
-          <select class="admin-select" id="report-room">
-            <option value="">Todas las salas</option>
-            <option value="1">Sala 1</option>
-            <option value="2">Sala 2</option>
-            <option value="3">Sala 3</option>
-          </select>
-        </label>
-      </div>
     </section>
   </main>
 </div>
@@ -186,16 +167,17 @@
       const params = new URLSearchParams();
       const startDate = document.getElementById('start-date').value;
       const endDate = document.getElementById('end-date').value;
-      const room = type === 'sala'
-        ? document.getElementById('single-room-report').value
-        : document.getElementById('report-room').value;
+      const room = document.getElementById('report-room').value;
+      const isOperative = document.getElementById('report-operative')?.checked;
+      
       params.set('tipo', type);
-      if ((type === 'personalizado' || type === 'sala') && startDate) params.set('fecha_inicio', startDate);
-      if ((type === 'personalizado' || type === 'sala') && endDate) params.set('fecha_fin', endDate);
-      if ((type === 'personalizado' || type === 'sala') && room) params.set('sala', room);
-      if (type === 'sala' && !room) {
-        showToast('Selecciona una sala para generar el informe por sala.');
-        return;
+      if (type === 'personalizado') {
+        if (startDate) params.set('fecha_inicio', startDate);
+        if (endDate) params.set('fecha_fin', endDate);
+        if (room) params.set('sala', room);
+      }
+      if (isOperative) {
+        params.set('operativo', 'true');
       }
 
       window.location.href = '/api/reportes/pdf?' + params.toString();

@@ -253,7 +253,7 @@ async def obtener_solicitudes(db: Session = Depends(get_db)):
             selectinload(Solicitud.eventos).selectinload(Evento.salas),
             selectinload(Solicitud.eventos).selectinload(Evento.requerimientos),
         )
-        .order_by(Solicitud.fecha_solicitud.desc(), Solicitud.hora_de_solicitud.desc())
+        .order_by(Solicitud.id_solicitud.desc())
     ).scalars().all()
 
     res = []

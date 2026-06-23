@@ -580,6 +580,47 @@
       localStorage.removeItem('token');
       window.location.href = '/api/auth/logout';
     });
+
+    // --- Validación de Disponibilidad de Salas en Tiempo Real ---
+    const calDateInput = document.getElementById('event-date');
+    const calStartInput = document.getElementById('event-start');
+    const calEndInput = document.getElementById('event-end');
+    const calRoomCheckboxes = document.querySelectorAll('input[name="event-room"]');
+    const eventIdInput = document.getElementById('event-id');
+
+    function checkCalendarRoomAvailability() {
+      if (!calDateInput || !calStartInput || !calEndInput) return;
+      if (!calDateInput.value || !calStartInput.value || !calEndInput.value) return;
+
+      const eventIdStr = eventIdInput && eventIdInput.value ? `&id_evento_ignorado=${eventIdInput.value}` : '';
+      const url = `/api/salas/disponibilidad?fecha=${calDateInput.value}&inicio=${calStartInput.value}&fin=${calEndInput.value}${eventIdStr}`;
+      
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const ocupadas = data.ocupadas || [];
+          calRoomCheckboxes.forEach(cb => {
+            const card = cb.closest('.modd-checkbox-card');
+            const span = card.querySelector('span');
+            const salaNum = parseInt(cb.value.replace('sala', ''));
+            
+            if (ocupadas.includes(salaNum)) {
+              card.classList.add('occupied');
+              cb.checked = false;
+              span.textContent = 'Ocupada';
+            } else {
+              card.classList.remove('occupied');
+              span.textContent = 'Sala ' + salaNum;
+            }
+          });
+        })
+        .catch(err => console.error('Error verificando disponibilidad:', err));
+    }
+
+    calDateInput?.addEventListener('change', checkCalendarRoomAvailability);
+    calStartInput?.addEventListener('change', checkCalendarRoomAvailability);
+    calEndInput?.addEventListener('change', checkCalendarRoomAvailability);
+
   });
 </script>
 {% endblock %}

@@ -158,12 +158,23 @@
       </label>
       <label class="modd-form-span">
         <span>Acomodo</span>
-        <textarea id="detail-layout" rows="2" readonly></textarea>
+        <input id="detail-layout" type="text" placeholder="Teatro, aula, herradura..." readonly>
       </label>
-      <label class="modd-form-span">
-        <span>Requerimientos</span>
-        <textarea id="detail-requirements" rows="3" readonly></textarea>
-      </label>
+      <fieldset class="modd-form-span request-check-grid compact-check-grid">
+        <legend>Requerimientos</legend>
+        <label class="modd-checkbox-card">
+          <input id="detail-audio" name="equipo_de_sonido" type="checkbox" disabled>
+          <span><i data-lucide="volume-2" class="w-4 h-4"></i> Equipo de sonido</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input id="detail-catering" name="cafeteria" type="checkbox" disabled>
+          <span><i data-lucide="coffee" class="w-4 h-4"></i> Cafeteria</span>
+        </label>
+        <label class="modd-checkbox-card">
+          <input id="detail-video" name="videoconferencia" type="checkbox" disabled>
+          <span><i data-lucide="video" class="w-4 h-4"></i> Videoconferencia</span>
+        </label>
+      </fieldset>
     </div>
 
     <div class="modd-modal-actions">
@@ -260,7 +271,11 @@
               hora_de_inicio: `${document.getElementById('detail-start').value}:00`,
               hora_de_termino: `${document.getElementById('detail-end').value}:00`,
               no_de_asistentes: Number(document.getElementById('detail-attendees').value || 0),
-              salas_ids: selectedRooms
+              salas_ids: selectedRooms,
+              acomodo: document.getElementById('detail-layout').value || null,
+              equipo_de_sonido: document.getElementById('detail-audio').checked,
+              cafeteria: document.getElementById('detail-catering').checked,
+              videoconferencia: document.getElementById('detail-video').checked
             })
           });
           if (!response.ok) {
@@ -288,16 +303,17 @@
       document.getElementById('detail-end').value = (row.dataset.end || '09:00:00').slice(0, 5);
       document.getElementById('detail-attendees').value = row.children[5].textContent.trim();
       document.getElementById('detail-description').value = row.dataset.description || 'Sin descripcion';
-      document.getElementById('detail-layout').value = row.dataset.layout || 'Sin acomodo';
-      document.getElementById('detail-requirements').value = row.dataset.requirements || 'Sin requerimientos';
+      document.getElementById('detail-layout').value = row.dataset.layout || '';
+      document.getElementById('detail-audio').checked = row.dataset.audio === 'true';
+      document.getElementById('detail-catering').checked = row.dataset.catering === 'true';
+      document.getElementById('detail-video').checked = row.dataset.video === 'true';
       const selectedRooms = (row.dataset.roomIds || '').split(',').filter(Boolean);
       detailForm.querySelectorAll('input[name="detail-room"]').forEach(function (input) {
         input.checked = selectedRooms.includes(input.value);
       });
 
       detailForm.querySelectorAll('input, textarea, select').forEach(function (input) {
-        const alwaysReadonly = input.id === 'detail-layout' || input.id === 'detail-requirements';
-        input.readOnly = alwaysReadonly || !editable;
+        input.readOnly = !editable;
         input.disabled = input.type === 'checkbox' || input.tagName === 'SELECT' ? !editable : false;
       });
       document.getElementById('event-detail-save').style.display = editable ? '' : 'none';
@@ -344,7 +360,7 @@
           const searchText = [item.titulo, cleanDesc, responsible, roomNames].join(' ').toLowerCase();
 
           return `
-            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-room-ids="${escapeAttr(roomIds.join(','))}" data-description="${escapeAttr(cleanDesc || 'Sin descripcion')}" data-layout="${escapeAttr(requirementsLayout(item))}" data-requirements="${escapeAttr(requirementsText(item))}" data-search="${escapeAttr(searchText)}">
+            <tr data-id="${item.id_evento}" data-date="${item.fecha}" data-start="${item.hora_de_inicio}" data-end="${item.hora_de_termino}" data-room="${roomKey}" data-room-ids="${escapeAttr(roomIds.join(','))}" data-description="${escapeAttr(cleanDesc || 'Sin descripcion')}" data-layout="${escapeAttr(item.requerimientos?.acomodo || '')}" data-audio="${Boolean(item.requerimientos?.equipo_de_sonido)}" data-catering="${Boolean(item.requerimientos?.cafeteria)}" data-video="${Boolean(item.requerimientos?.videoconferencia)}" data-search="${escapeAttr(searchText)}">
               <td data-label="Evento"><div class="event-name-line" style="--event-color:#24398A"><div class="admin-strong">${escapeHTML(item.titulo)}</div><div class="admin-muted">${escapeHTML(cleanDesc || 'Sin descripcion')}</div></div></td>
               <td data-label="Responsable">${escapeHTML(responsible)}</td>
               <td data-label="Sala"><span class="room-pill ${roomKey}">${escapeHTML(roomNames)}</span></td>
@@ -450,7 +466,7 @@
     }
 
     function formatDate(value) {
-      return capitalize(new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' }));
+      return capitalize(new Date(value + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' }));
     }
 
     function capitalize(value) {
@@ -477,6 +493,45 @@
       toast.classList.add('show');
       setTimeout(function () { toast.classList.remove('show'); }, 2800);
     }
+
+    // --- Validación de Disponibilidad de Salas en Tiempo Real ---
+    const detailDateInput = document.getElementById('detail-date');
+    const detailStartInput = document.getElementById('detail-start');
+    const detailEndInput = document.getElementById('detail-end');
+    const detailRoomCheckboxes = document.querySelectorAll('input[name="detail-room"]');
+
+    function checkDetailRoomAvailability() {
+      if (!detailDateInput.value || !detailStartInput.value || !detailEndInput.value) return;
+
+      const eventIdStr = activeRow && activeRow.dataset.eventId ? `&id_evento_ignorado=${activeRow.dataset.eventId}` : '';
+      const url = `/api/salas/disponibilidad?fecha=${detailDateInput.value}&inicio=${detailStartInput.value}&fin=${detailEndInput.value}${eventIdStr}`;
+      
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const ocupadas = data.ocupadas || [];
+          detailRoomCheckboxes.forEach(cb => {
+            const card = cb.closest('.modd-checkbox-card');
+            const span = card.querySelector('span');
+            const salaNum = parseInt(cb.value);
+            
+            if (ocupadas.includes(salaNum)) {
+              card.classList.add('occupied');
+              cb.checked = false;
+              span.textContent = 'Ocupada';
+            } else {
+              card.classList.remove('occupied');
+              span.textContent = 'Sala ' + salaNum;
+            }
+          });
+        })
+        .catch(err => console.error('Error verificando disponibilidad:', err));
+    }
+
+    detailDateInput?.addEventListener('change', checkDetailRoomAvailability);
+    detailStartInput?.addEventListener('change', checkDetailRoomAvailability);
+    detailEndInput?.addEventListener('change', checkDetailRoomAvailability);
+
   });
 </script>
 {% endblock %}

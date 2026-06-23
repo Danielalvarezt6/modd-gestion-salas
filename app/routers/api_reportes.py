@@ -36,10 +36,12 @@ def _eventos_filtrados(
     fecha_fin: Optional[date] = None,
     sala: Optional[int] = None,
 ):
-    stmt = select(Evento).options(
+    stmt = select(Evento).outerjoin(Solicitud).options(
         selectinload(Evento.salas),
         selectinload(Evento.requerimientos),
         selectinload(Evento.solicitud).selectinload(Solicitud.solicitante),
+    ).where(
+        (Evento.id_solicitud.is_(None)) | (Solicitud.estado == "aprobada")
     )
 
     if fecha_inicio:
@@ -80,7 +82,11 @@ def _resumen_eventos(eventos):
 def _wrapped_lines(label, value, width_chars=96):
     text = "" if value is None else str(value)
     prefix = f"{label}: " if label else ""
-    return wrap(prefix + text, width=width_chars) or [prefix + text]
+    full_text = prefix + text
+    lines = []
+    for part in full_text.split('\n'):
+        lines.extend(wrap(part, width=width_chars) or [part])
+    return lines
 
 
 class SimplePDF:
@@ -229,12 +235,17 @@ class SimplePDF:
         return buffer.getvalue()
 
 
-def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=None) -> bytes:
+def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=None, operativo=False) -> bytes:
     resumen = _resumen_eventos(eventos)
     pdf = SimplePDF()
     periodo = f"{fecha_inicio or 'Sin inicio'} a {fecha_fin or 'Sin fin'}"
     sala_texto = "Todas las salas" if not sala else f"Sala {sala}"
-    pdf.header(titulo, "Documento para informar eventos y preparar salas")
+    
+    subtitle = "Documento operativo para preparacion de salas" if operativo else "Documento para informar eventos y preparar salas"
+    if sala:
+        titulo = f"Reporte Exclusivo - Sala {sala}"
+
+    pdf.header(titulo, subtitle)
 
     pdf.text(f"Generado: {date.today().isoformat()}   |   Periodo: {periodo}   |   Filtro: {sala_texto}", size=8.5, gap=24)
     pdf.metric_card(46, pdf.y - 52, 150, "Eventos", resumen["total_eventos"], accent=(0.14, 0.22, 0.54))
@@ -259,8 +270,7 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
             if solicitante
             else "Solicitante no asignado"
         )
-        correo = solicitante.correo if solicitante else "Sin correo"
-        telefono = solicitante.no_de_telefono if solicitante else "Sin telefono"
+            
         horario = f"{evento.hora_de_inicio.strftime('%H:%M')} - {evento.hora_de_termino.strftime('%H:%M')}"
 
         req = evento.requerimientos
@@ -277,10 +287,12 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
 
         descripcion_lineas = _wrapped_lines("Descripcion", evento.descripcion or "Sin descripcion", width_chars=88)
         preparacion_lineas = _wrapped_lines("Preparacion de sala", preparacion_texto, width_chars=88)
-        contenido_alto = (len(descripcion_lineas) + len(preparacion_lineas)) * 11
-        card_height = max(178, 126 + contenido_alto)
+        
+        # Calculate dynamic height based on lines
+        contenido_alto = (len(descripcion_lineas) + len(preparacion_lineas)) * 12
+        card_height = max(178, 140 + contenido_alto)
 
-        pdf.ensure_space(card_height + 18)
+        pdf.ensure_space(card_height + 24)
         card_top = pdf.y
         card_bottom = card_top - card_height
         pdf.rect(46, card_bottom, 520, card_height + 6, fill=(0.98, 0.99, 1), stroke=(0.84, 0.87, 0.93))
@@ -291,7 +303,11 @@ def _generar_pdf(titulo: str, eventos, fecha_inicio=None, fecha_fin=None, sala=N
         pdf.info_line("Sala", salas, 62, card_top - 62, width_chars=24)
         pdf.info_line("Asistentes", evento.no_de_asistentes or 0, 190, card_top - 62, width_chars=18)
         pdf.info_line("Responsable / solicitante", responsable, 300, card_top - 62, width_chars=34)
-        pdf.info_line("Contacto", f"{correo} | {telefono}", 62, card_top - 104, width_chars=58)
+        
+        if not operativo:
+            correo = solicitante.correo if solicitante else "Sin correo"
+            telefono = solicitante.no_de_telefono if solicitante else "Sin telefono"
+            pdf.info_line("Contacto", f"{correo} | {telefono}", 62, card_top - 104, width_chars=58)
 
         pdf.y = card_top - 116
         for index, line in enumerate(descripcion_lineas):
@@ -354,6 +370,7 @@ async def descargar_reporte_pdf(
     fecha_inicio: Optional[date] = Query(default=None),
     fecha_fin: Optional[date] = Query(default=None),
     sala: Optional[int] = Query(default=None),
+    operativo: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
     """
@@ -377,13 +394,13 @@ async def descargar_reporte_pdf(
         fecha_fin = next_month - timedelta(days=1)
         titulo = "Reporte mensual"
         filename = f"reporte_mensual_{fecha_inicio.strftime('%Y_%m')}.pdf"
-    elif tipo == "sala":
-        titulo = "Informe por sala"
+    elif tipo == "sala" or sala:
+        titulo = f"Reporte Exclusivo - Sala {sala}"
         filename = f"informe_sala_{sala or 'todas'}.pdf"
     else:
         titulo = "Reporte personalizado"
         filename = "reporte_personalizado_modd.pdf"
 
     eventos = _eventos_filtrados(db, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, sala=sala)
-    content = _generar_pdf(titulo, eventos, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, sala=sala)
+    content = _generar_pdf(titulo, eventos, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, sala=sala, operativo=operativo)
     return _pdf_response(filename, content)

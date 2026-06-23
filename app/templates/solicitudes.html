@@ -462,7 +462,6 @@
         const response = await fetch('/api/solicitudes/');
         if (!response.ok) throw new Error('No se pudieron cargar solicitudes.');
         let requests = await response.json();
-        requests.reverse(); // Show most recent first
         if (!requests.length) {
           tableBody.innerHTML = '<tr><td colspan="8" class="admin-muted">No hay solicitudes registradas en la base de datos.</td></tr>';
           rows = [];
@@ -475,7 +474,7 @@
           const salas = item.salas.map(function (sala) { return 'Sala ' + sala.numero_sala; }).join(', ') || 'Sin sala';
           const salaIds = item.salas.map(function (sala) { return sala.numero_sala; });
           const horario = item.evento_inicio && item.evento_fin ? `${item.evento_inicio.slice(0, 5)} - ${item.evento_fin.slice(0, 5)}` : '--:--';
-          const fecha = item.evento_fecha ? capitalize(new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long' })) : 'Sin fecha';
+          const fecha = item.evento_fecha ? capitalize(new Date(item.evento_fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' })) : 'Sin fecha';
           const requerimientos = formatRequirements(item);
           const searchText = [item.solicitante_nombre, item.solicitante_correo, item.evento_titulo, salas, requerimientos].join(' ').toLowerCase();
           const firstName = requesterFirstName(item);
@@ -648,6 +647,44 @@
     function escapeAttr(value) {
       return escapeHTML(value).replaceAll('`', '&#096;');
     }
+
+    // --- Validación de Disponibilidad de Salas en Tiempo Real ---
+    const dateInput = document.querySelector('input[name="evento_fecha"]');
+    const startInput = document.querySelector('select[name="evento_inicio"]');
+    const endInput = document.querySelector('select[name="evento_fin"]');
+    const roomCheckboxes = document.querySelectorAll('input[name="salas_ids"]');
+
+    function checkRoomAvailability() {
+      if (!dateInput.value || !startInput.value || !endInput.value) return;
+
+      const url = `/api/salas/disponibilidad?fecha=${dateInput.value}&inicio=${startInput.value}&fin=${endInput.value}`;
+      
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const ocupadas = data.ocupadas || [];
+          roomCheckboxes.forEach(cb => {
+            const card = cb.closest('.modd-checkbox-card');
+            const span = card.querySelector('span');
+            const salaNum = parseInt(cb.value);
+            
+            if (ocupadas.includes(salaNum)) {
+              card.classList.add('occupied');
+              cb.checked = false;
+              span.textContent = 'Ocupada';
+            } else {
+              card.classList.remove('occupied');
+              span.textContent = 'Sala ' + salaNum;
+            }
+          });
+        })
+        .catch(err => console.error('Error verificando disponibilidad:', err));
+    }
+
+    dateInput.addEventListener('change', checkRoomAvailability);
+    startInput.addEventListener('change', checkRoomAvailability);
+    endInput.addEventListener('change', checkRoomAvailability);
+
   });
 </script>
 {% endblock %}

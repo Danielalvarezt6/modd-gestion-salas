@@ -8,12 +8,9 @@ El sistema fue desarrollado con un backend robusto basado en **FastAPI** y una i
 
 ## 🚀 Funcionalidades Principales
 
-### Para Usuarios y Solicitantes
 - **Dashboard e Inicio de Sesión**: Autenticación segura mediante cookies JWT con redirección automática para rutas protegidas.
 - **Formularios de Solicitud (Google Forms Ready)**: Compatibilidad para procesar solicitudes externas o de forma nativa a través de la aplicación.
 - **Modo Oscuro/Claro**: Soporte completo de temas que se adaptan a las preferencias del sistema del usuario, incluyendo componentes dinámicos como el calendario y los PDF exportables.
-
-### Para Administradores
 - **Notificaciones por Correo**: Envío automático de resoluciones (aprobaciones o rechazos) vía email utilizando procesamiento asíncrono (`BackgroundTasks`) sin retrasar la respuesta del servidor.
 - **Calendario Interactivo**: Visualización de eventos y disponibilidades en formato semanal, mensual y diario utilizando `FullCalendar`.
 - **Drag & Drop Avanzado**: Ajuste dinámico de la duración de los eventos y la sala asignada arrastrando los bloques dentro del calendario, con cálculos de disponibilidad en tiempo real.

@@ -243,6 +243,29 @@ async def actualizar_evento(id_evento: int, evento: EventoUpdate, db: Session = 
 
         evento_db.salas = salas_asignadas
 
+    if evento_db.requerimientos:
+        if evento.acomodo is not None:
+            evento_db.requerimientos.acomodo = evento.acomodo
+        if evento.equipo_de_sonido is not None:
+            evento_db.requerimientos.equipo_de_sonido = evento.equipo_de_sonido
+        if evento.cafeteria is not None:
+            evento_db.requerimientos.cafeteria = evento.cafeteria
+        if evento.videoconferencia is not None:
+            evento_db.requerimientos.videoconferencia = evento.videoconferencia
+    else:
+        if evento.acomodo or evento.equipo_de_sonido or evento.cafeteria or evento.videoconferencia:
+            from app.models.salas import Requerimientos
+            nuevo_req = Requerimientos(
+                acomodo=evento.acomodo,
+                equipo_de_sonido=evento.equipo_de_sonido or False,
+                cafeteria=evento.cafeteria or False,
+                videoconferencia=evento.videoconferencia or False
+            )
+            db.add(nuevo_req)
+            db.flush()
+            evento_db.id_requerimientos = nuevo_req.id_requerimientos
+            evento_db.requerimientos = nuevo_req
+
     db.commit()
     db.refresh(evento_db)
     return evento_db

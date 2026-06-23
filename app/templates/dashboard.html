@@ -864,7 +864,7 @@
 
     function renderRecentRequests(requests) {
       const tbody = document.querySelector('#dashboard-requests-table tbody');
-      const recent = [...requests].reverse().slice(0, 5);
+      const recent = requests.slice(0, 5);
       if (!recent.length) {
         tbody.innerHTML = '<tr><td class="empty-state">No hay solicitudes registradas.</td></tr>';
         return;
@@ -963,9 +963,9 @@
 
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      const parts = dateStr.split('-');
-      if (parts.length !== 3) return dateStr;
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      const d = new Date(dateStr + 'T00:00:00');
+      const formatted = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
 
     function formatTime(timeStr) {

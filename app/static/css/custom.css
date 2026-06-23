@@ -1909,6 +1909,18 @@ select:focus {
   border-color: var(--blue-600, #24398A);
 }
 
+.modd-checkbox-card.occupied {
+  background: var(--blue-600, #24398A) !important;
+  border-color: var(--blue-600, #24398A) !important;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.modd-checkbox-card.occupied span {
+  color: #fff !important;
+}
+
 .modd-room-select {
   border: 0;
   margin-top: 1.15rem;

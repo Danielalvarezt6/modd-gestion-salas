@@ -147,7 +147,10 @@ class EventoCreate(EventoBase):
 
 
 class EventoUpdate(EventoCreate):
-    pass
+    acomodo: Optional[str] = None
+    equipo_de_sonido: Optional[bool] = None
+    cafeteria: Optional[bool] = None
+    videoconferencia: Optional[bool] = None
 
 
 class EventoOut(EventoBase):
