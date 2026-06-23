@@ -320,6 +320,9 @@
       modal.classList.remove('hidden');
       modal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
+      const eventDateInput = document.getElementById('detail-date');
+      if (eventDateInput) eventDateInput.dispatchEvent(new Event('change'));
+      if (typeof checkDetailRoomAvailability === 'function') checkDetailRoomAvailability();
     }
 
     function closeEventDetail() {
@@ -518,9 +521,11 @@
             if (ocupadas.includes(salaNum)) {
               card.classList.add('occupied');
               cb.checked = false;
+              cb.disabled = true;
               span.textContent = 'Ocupada';
             } else {
               card.classList.remove('occupied');
+              cb.disabled = false;
               span.textContent = 'Sala ' + salaNum;
             }
           });

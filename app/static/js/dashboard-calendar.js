@@ -618,6 +618,12 @@
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    
+    const eventDateInput = document.getElementById('event-date');
+    if (eventDateInput) {
+      eventDateInput.dispatchEvent(new Event('change'));
+    }
+
     setTimeout(() => document.getElementById('event-title')?.focus(), 0);
   }
 

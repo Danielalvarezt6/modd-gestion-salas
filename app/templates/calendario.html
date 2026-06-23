@@ -607,9 +607,11 @@
             if (ocupadas.includes(salaNum)) {
               card.classList.add('occupied');
               cb.checked = false;
+              cb.disabled = true;
               span.textContent = 'Ocupada';
             } else {
               card.classList.remove('occupied');
+              cb.disabled = false;
               span.textContent = 'Sala ' + salaNum;
             }
           });
