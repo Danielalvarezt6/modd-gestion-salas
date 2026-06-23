@@ -25,7 +25,7 @@ class Solicitante(Base):
     id_solicitante = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
     apellido = Column(String, nullable=False)
-    correo = Column(String, unique=True, index=True, nullable=False)
+    correo = Column(String, index=True, nullable=False)
     no_de_telefono = Column(String)
 
     solicitudes = relationship("Solicitud", back_populates="solicitante")
